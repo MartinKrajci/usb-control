@@ -1,5 +1,5 @@
 all:
-	g++ -std=c++17 usb-control.cpp -o usb-control -l sqlite3
+	g++ -std=c++17 usb-control.cpp -o usb-control -l sqlite3 -lstdc++fs
 	g++ rules.cpp -o rules -l sqlite3
 
 run:
