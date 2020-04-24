@@ -123,7 +123,7 @@ int Control::checkIfNoGroups(void *data, int argc, char **argv, char **column)
 {
     Control *con = Control::getControl();
 
-    if(**argv == '0')
+    if(**argv != '0')
     {
         con->GroupFoundFlag = true;
     }
@@ -140,7 +140,7 @@ void Control::save_groups(char **argv)
     group->deviceSubclass = (argv[2] ? argv[2] : "NULL");
     group->vendor = (argv[3] ? argv[3] : "NULL");
     group->product = (argv[4] ? argv[4] : "NULL");
-    group->interfaceClass = (argv[5] ? argv[5] : "NULL");
+    group->interfacesTotal = (argv[7] ? stoi(argv[7]) : 999);
     group->port = (argv[8] ? argv[8] : "NULL");
     group->groupID = (argv[9] ? argv[9] : "NULL");
     con->groups.push_back(group);
@@ -151,34 +151,28 @@ void Control::save_interface_rule(char **argv)
     InterfaceRule *rule = new InterfaceRule;
     Control *con = Control::getControl();
     vector<RulesGroup *>::iterator group;
-
-    rule->interfaceClass = (argv[6] ? argv[6] : "NULL");
-    rule->interfaceSubclass = (argv[7] ? argv[7] : "NULL");
-
+    rule->interfaceClass = (argv[5] ? argv[5] : "NULL");
+    rule->interfaceSubclass = (argv[6] ? argv[6] : "NULL");
     for (group = con->groups.begin(); group < con->groups.end(); group++)
     {
         if (string(argv[9]) == (* group)->groupID)
         {
             (* group)->interfaceRules.push_back(rule);
         }
-        
     }
-    
 }
 
 int Control::parse_groups(void *data, int argc, char **argv, char **column)
 {
-    for(int i = 0; i<argc; i++)
+    if(argv[10] != NULL)
     {
-        if(string(argv[10]) == "1")
-        {
-            save_groups(argv);
-        }
-        else
-        {
-            save_interface_rule(argv);
-        }
+        save_groups(argv);
     }
+    else
+    {
+        save_interface_rule(argv);
+    }
+
     return 0;
 }
 
@@ -186,8 +180,8 @@ void Control::read_rules()
 {
     int rc;
     sqlite3 *db;
-    //string SQLSelectRules = "SELECT * FROM RULE WHERE GROUP_ID IS NULL";
-    string SQLSelectRules = "SELECT * FROM RULE";
+    string SQLSelectRules = "SELECT * FROM RULE WHERE GROUP_ID IS NULL";
+    //string SQLSelectRules = "SELECT * FROM RULE";
     string SQLCheckIfTableExists = "SELECT COUNT(type) FROM sqlite_master WHERE TYPE='table' AND NAME='RULE'";
     string SQLCeckIfRulesExists =  "SELECT COUNT() FROM RULE";
     string SQLCheckIfGroupsExist = "SELECT COUNT() FROM RULE WHERE GROUP_ID IS NOT NULL";
@@ -222,7 +216,7 @@ void Control::read_rules()
         throw FAILED;
     }
 
-    /*rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroups, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroups, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
@@ -232,17 +226,16 @@ void Control::read_rules()
     if (GroupFoundFlag)
     {
         GroupFoundFlag = false;
-
         rc = sqlite3_exec(db, SQLSelectGroups.c_str(), parse_groups, NULL, &errmsg);
         if (rc)
         {
             cerr << "Could not execute command, " << errmsg << "\n";
             throw FAILED;
         }
-    }*/
+    }
 }
 
-void Control::check_device(Device device)
+bool Control::check_for_rule(Device device)
 {
     vector<Rule *>::iterator rule;
 
@@ -286,18 +279,122 @@ void Control::check_device(Device device)
             {
                 if((currentInterface + 1) == device.interfacesTotal)
                 {
-                    device.authorize();
-                    cout << "Device authorized..\n";
-                    return;
+                    return true;
                 }
                 break;
             }
         }
     }
 
-    device.disconnect();
-    cout << "! Disconnecting potenctialy dangerous device !\n";
-    return;
+    return false;
+}
+
+bool Control::check_for_group(Device device)
+{
+    vector<RulesGroup *>::iterator group;
+
+    for (group = groups.begin(); group < (groups.end()); group++)
+    {
+        if (device.interfacesTotal < (*group)->interfaceRules.size())
+        {
+            continue;
+        }
+
+        if(device.deviceClass != (*group)->deviceClass && (*group)->deviceClass != "NULL")
+        {
+            continue;
+        }
+        else if(device.deviceSubclass != (*group)->deviceSubclass && (*group)->deviceSubclass != "NULL")
+        {
+            continue;
+        }
+        else if(device.vendor != (*group)->vendor && (*group)->vendor != "NULL")
+        {
+            continue;
+        }
+        else if(device.product != (*group)->product && (*group)->product != "NULL")
+        {
+            continue;
+        }
+        else if(device.port != (*group)->port && (*group)->port != "NULL")
+        {
+            continue;
+        }
+        else if(device.interfacesTotal != (*group)->interfacesTotal && (*group)->interfacesTotal != 999)
+        {
+            continue;
+        }
+        else
+        {
+            vector<InterfaceRule *>::iterator interface;
+
+            for(int currentInterface = 0; currentInterface < device.interfacesTotal; currentInterface++)
+            {
+                for (interface = (*group)->interfaceRules.begin();interface < (*group)->interfaceRules.end(); interface++)
+                {
+                    if((*interface)->wasUsed)
+                    {
+                        continue;
+                    }
+
+                    if(device.interfaces[currentInterface].interfaceClass != (*interface)->interfaceClass && (*interface)->interfaceClass != "NULL")
+                    {
+                        continue;
+                    }
+                    else if(device.interfaces[currentInterface].interfaceSubclass != (*interface)->interfaceSubclass && (*interface)->interfaceSubclass != "NULL")
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        if((currentInterface + 1) == device.interfacesTotal)
+                        {
+                            return true;
+                        }
+                        (*interface)->wasUsed = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+void Control::clean_groups()
+{
+    vector<RulesGroup *>::iterator group;
+    vector<InterfaceRule *>::iterator interface;
+
+    for (group = groups.begin(); group < groups.end(); group++)
+    {   
+        for(interface = (*group)->interfaceRules.begin(); interface < (*group)->interfaceRules.end(); interface++)
+        {
+            (*interface)->wasUsed = false;
+        }
+    }
+    
+}
+
+void Control::check_device(Device device)
+{
+    bool authorized = false;
+
+    authorized = authorized | check_for_rule(device);
+    authorized = authorized | check_for_group(device);
+    clean_groups();
+
+    if (authorized)
+    {
+        device.authorize();
+        cout << "Device authorized..\n";
+    }
+    else
+    {
+        device.disconnect();
+        cout << "! Disconnecting potenctialy dangerous device !\n";
+    }
 }
 
 Control *Control::getControl()

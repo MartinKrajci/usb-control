@@ -31,6 +31,7 @@ class InterfaceRule
     public:
         string interfaceClass;
         string interfaceSubclass;
+        bool wasUsed = false;
 };
 
 class RulesGroup
@@ -40,10 +41,9 @@ class RulesGroup
         string deviceSubclass;
         string vendor;
         string product;
-        string interfaceClass;
-        string interfaceSubclass;
         string port;
         string groupID;
+        int interfacesTotal = 0;
         vector<InterfaceRule *> interfaceRules;
 
 };
@@ -108,6 +108,9 @@ class Control
         static int parse_groups(void *data, int argc, char **argv, char **column);
         static void save_groups(char **argv);
         static void save_interface_rule(char **argv);
+        bool check_for_rule(Device device);
+        bool check_for_group(Device device);
+        void clean_groups();
 
     public:
 
