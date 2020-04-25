@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        25.4.2020
+*/
+
 #include "usb-control.h"
 
 int main()

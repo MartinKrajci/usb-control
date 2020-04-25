@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        25.4.2020
+*/
+
 #include "usb-control.h"
 
 #define FAILED 1
@@ -7,6 +13,9 @@ namespace fs = std::filesystem;
 
 Control *Control::control;
 
+/*
+* Loads all attributes related with interface from files in given path.
+*/
 void Interface::loadAttributes()
 {
     ifstream fInterfaceClass;
@@ -19,6 +28,9 @@ void Interface::loadAttributes()
     getline(fInterfaceSubclass, interfaceSubclass);
 }
 
+/*
+* Loads all attributes related with device from files in given path.
+*/
 void Device::loadAttributes()
 {
     ifstream fDeviceClass;
@@ -48,6 +60,9 @@ void Device::loadAttributes()
     fPort.close();
 }
 
+/*
+* Disconnect device by writing "0" in file named "authorized" in given path on device level.
+*/
 void Device::disconnect()
 {
     ofstream fAuthorized;
@@ -63,7 +78,11 @@ void Device::disconnect()
             for(; path[i] != '/'; i--);
             return i + 1;
         }
-
+/*
+* Authorize every interface of device by writing "1" in file named "authorized" in given path on
+* interface level and by writing folder name belonging to this interface into
+* /sys/bus/usb/drivers_probe file, which cause drivers binding.
+*/
 void Device::authorize()
 {
     vector<Interface>::iterator interface;
@@ -85,6 +104,9 @@ void Device::authorize()
     }
 }
 
+/*
+* Save result returned from SQL command into Control class variables.
+*/
 void Control::save_rules(char **argv)
 {
     int i = 0;
@@ -103,13 +125,20 @@ void Control::save_rules(char **argv)
 
 }
 
+/*
+* Callback needed by sqlite3
+*/
 int Control::callback(void *data, int argc, char **argv, char **column)
 {
     Control::save_rules(argv);
     return 0;
 }
 
-int Control::checkIfNoRules(void *data, int argc, char **argv, char **column)
+/*
+* Callback checking if there are no rules in database. If so, exception is thrown because application
+* cannot continue without rules.
+*/
+int Control::checkIfNoRulesCallback(void *data, int argc, char **argv, char **column)
 {
     if(**argv == '0')
     {
@@ -119,7 +148,10 @@ int Control::checkIfNoRules(void *data, int argc, char **argv, char **column)
     return 0;
 }
 
-int Control::checkIfNoGroups(void *data, int argc, char **argv, char **column)
+/*
+* Callback which sets flag if any rules group was found, so we can read them later. 
+*/
+int Control::checkIfNoGroupsCallback(void *data, int argc, char **argv, char **column)
 {
     Control *con = Control::getControl();
 
@@ -130,6 +162,9 @@ int Control::checkIfNoGroups(void *data, int argc, char **argv, char **column)
     return 0;
 }
 
+/*
+* Save result returned from SQL command in class variables.
+*/
 void Control::save_groups(char **argv)
 {
     int i = 0;
@@ -146,6 +181,9 @@ void Control::save_groups(char **argv)
     con->groups.push_back(group);
 }
 
+/*
+* Save result returned from SQL command in class variables and find rules group where it belongs to.
+*/
 void Control::save_interface_rule(char **argv)
 {
     InterfaceRule *rule = new InterfaceRule;
@@ -162,6 +200,9 @@ void Control::save_interface_rule(char **argv)
     }
 }
 
+/*
+* Method decides if result returned from SQL command is group for rules or interface rule.
+*/
 int Control::parse_groups(void *data, int argc, char **argv, char **column)
 {
     if(argv[10] != NULL)
@@ -176,12 +217,14 @@ int Control::parse_groups(void *data, int argc, char **argv, char **column)
     return 0;
 }
 
+/*
+* If there are any rules or group of rules, they are read from database and processed.
+*/
 void Control::read_rules()
 {
     int rc;
     sqlite3 *db;
     string SQLSelectRules = "SELECT * FROM RULE WHERE GROUP_ID IS NULL";
-    //string SQLSelectRules = "SELECT * FROM RULE";
     string SQLCheckIfTableExists = "SELECT COUNT(type) FROM sqlite_master WHERE TYPE='table' AND NAME='RULE'";
     string SQLCeckIfRulesExists =  "SELECT COUNT() FROM RULE";
     string SQLCheckIfGroupsExist = "SELECT COUNT() FROM RULE WHERE GROUP_ID IS NOT NULL";
@@ -195,14 +238,14 @@ void Control::read_rules()
         throw FAILED;
     }
 
-    rc = sqlite3_exec(db, SQLCheckIfTableExists.c_str(), checkIfNoRules, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheckIfTableExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
         throw FAILED;
     }
 
-    rc = sqlite3_exec(db, SQLCeckIfRulesExists.c_str(), checkIfNoRules, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCeckIfRulesExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
@@ -216,7 +259,7 @@ void Control::read_rules()
         throw FAILED;
     }
 
-    rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroups, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroupsCallback, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
@@ -235,6 +278,11 @@ void Control::read_rules()
     }
 }
 
+/*
+* Every attribute from rules is compared with attributes from device and its interfaces. If no
+* rules which could satisfy device and its interafaces were found, method returns false, otherwise
+* true.
+*/
 bool Control::check_for_rule(Device device)
 {
     vector<Rule *>::iterator rule;
@@ -289,6 +337,12 @@ bool Control::check_for_rule(Device device)
     return false;
 }
 
+/*
+* At first compare device attributes and attributes from group. After that, every interface of
+* device and its attributes are compared with interface rules, belonging to particular group.
+* Every interface rule can be used only once. If no match is found, method returns false, otherwise
+* true. 
+*/
 bool Control::check_for_group(Device device)
 {
     vector<RulesGroup *>::iterator group;
@@ -362,6 +416,10 @@ bool Control::check_for_group(Device device)
     return false;
 }
 
+/*
+* Set flag if interface rules was used to false, so they can be used again when new device will
+* be checked.
+*/
 void Control::clean_groups()
 {
     vector<RulesGroup *>::iterator group;
@@ -377,13 +435,20 @@ void Control::clean_groups()
     
 }
 
+/*
+* Check new connected device with rules and groups of rules. If at least one match was found,
+* device is authorized, otherwise disconnected.
+*/
 void Control::check_device(Device device)
 {
     bool authorized = false;
 
     authorized = authorized | check_for_rule(device);
-    authorized = authorized | check_for_group(device);
-    clean_groups();
+    if(GroupFoundFlag)
+    {
+        authorized = authorized | check_for_group(device);
+        clean_groups();
+    }
 
     if (authorized)
     {
@@ -397,6 +462,9 @@ void Control::check_device(Device device)
     }
 }
 
+/*
+* Method to get pointer for the only one object of Control class, because singleton is used.
+*/
 Control *Control::getControl()
 {
     if(control == 0)
@@ -406,6 +474,9 @@ Control *Control::getControl()
     return control;
 }
 
+/*
+* Constructor of Netlink class. Netlink socket is created and binded.
+*/
 Netlink::Netlink()
 {
     struct sockaddr_nl addr;
@@ -430,6 +501,10 @@ Netlink::Netlink()
 
 }
 
+/*
+* Writes "0" to files named "interface_authorized_default" in every usb bus folder, so newly
+* connected deviced can't make any harm before they are checked. 
+*/
 void Netlink::init_enviroment()
 {
     regex usbFolder("usb\\d+");
@@ -447,6 +522,9 @@ void Netlink::init_enviroment()
     }
 }
 
+/*
+* Return position of string when last folder starts.
+*/
 int Netlink::find_last_folder(char *path)
 {
     int i = strlen(path);
@@ -454,6 +532,9 @@ int Netlink::find_last_folder(char *path)
     return i + 1;
 }
 
+/*
+* Object for newly connected device is created and path of device and number of interfaces are saved.
+*/
 void Netlink::save_device(char *buffer)
 {
     Device device;
@@ -468,6 +549,10 @@ void Netlink::save_device(char *buffer)
     devices.push_back(device);
 }
 
+/*
+* Object for interface of newly connected device is created and its path is saved. If all interfaces
+* were found, device is compared against rules. 
+*/
 void Netlink::save_interface(char *buffer)
 {
     static Control *con;
@@ -493,6 +578,10 @@ void Netlink::save_interface(char *buffer)
     }
 }
 
+/*
+* Main loop of whole application. If there are any new messages in buffer from kernel, they are
+* compared with regexes and divided into paths of devices and interfaces. 
+*/
 void Netlink::listen_events()
 {
     buffer = (char *) malloc(120);
@@ -528,6 +617,10 @@ void Netlink::listen_events()
     }
 }
 
+/*
+* Function called in the end of application, returning enviroment into original state so newly
+* connected devices won't be affected.
+*/
 void at_exit()
 {
     regex usbFolder("usb\\d+");

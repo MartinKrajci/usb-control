@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        25.4.2020
+*/
+
 #ifndef USB_CONTROL
 #define USB_CONTROL
 
@@ -103,8 +109,8 @@ class Control
 
         static void save_rules(char **argv);
         static int callback(void *data, int argc, char **argv, char **column);
-        static int checkIfNoRules(void *data, int argc, char **argv, char **column);
-        static int checkIfNoGroups(void *data, int argc, char **argv, char **column);
+        static int checkIfNoRulesCallback(void *data, int argc, char **argv, char **column);
+        static int checkIfNoGroupsCallback(void *data, int argc, char **argv, char **column);
         static int parse_groups(void *data, int argc, char **argv, char **column);
         static void save_groups(char **argv);
         static void save_interface_rule(char **argv);

@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        25.4.2020
+*/
+
 #include "rules.h"
 
 #define FAILED 1
@@ -6,6 +12,10 @@ using namespace std;
 
 Database *Database::database;
 
+
+/*
+* Database constructor. Open database file and create a new table for rules, if one already don't exist.
+*/
 Database::Database()
 {
     int rc = 0;
@@ -38,6 +48,10 @@ Database::Database()
     }
 }
 
+/*
+* Method to get pointer to the only one pointer to object of Database class because we are
+* using singletone.
+*/
 Database *Database::getDatabase()
 {
     if (database == NULL)
@@ -48,6 +62,9 @@ Database *Database::getDatabase()
     return database;
 }
 
+/*
+* Check if given string is of correct format (two hexadecimal numbers)
+*/
 void Database::checkIfTwoHex(string arg)
 {
     regex twoHex("[0-9a-fA-F]{2}");
@@ -59,6 +76,9 @@ void Database::checkIfTwoHex(string arg)
     }
 }
 
+/*
+* Check if given string is of correct format (four hexadecimal numbers)
+*/
 void Database::checkIfFourHex(string arg)
 {
     regex fourHex("[0-9a-fA-F]{4}");
@@ -70,6 +90,9 @@ void Database::checkIfFourHex(string arg)
     }
 }
 
+/*
+* Check if given string is of correct format (decimal number)
+*/
 void Database::checkIfNum(string arg)
 {
     regex num("\\d+");
@@ -81,6 +104,10 @@ void Database::checkIfNum(string arg)
     }
 }
 
+/*
+* Method for parsing command line parameters. Arguments of parameters are checked and stored in
+* class variables
+*/
 void Database::parseArguments(int argc, char **argv)
 {
     int opt = 0;
@@ -173,6 +200,11 @@ void Database::parseArguments(int argc, char **argv)
     }
 }
 
+
+/*
+* Callback for SQL commands, its form is required by sqlite3. It's called for every row in
+/ result of SQL command.
+*/
 int Database::callback(void *data, int argc, char **argv, char **column)
 {
     for(int i = 0; i<argc; i++)
@@ -187,7 +219,10 @@ int Database::callback(void *data, int argc, char **argv, char **column)
    return 0;
 }
 
-int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **azColName)
+/*
+* Callback for SQL command which check if given group exists.
+*/
+int Database::checkIfGroupExistsCallback(void *data, int argc, char **argv, char **column)
 {
     if(**argv == '0')
     {
@@ -197,7 +232,10 @@ int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, c
     return 0;
 }
 
-void Database::checkIfGroupNotExists()
+/*
+* Execute SQL command which check if given group exists.
+*/
+void Database::checkIfGroupExists()
 {
     int rc;
     char *errmsg = NULL;
@@ -205,7 +243,7 @@ void Database::checkIfGroupNotExists()
 
     SQLCheck = "SELECT COUNT() FROM RULE WHERE GROUP_ID='" + groupID + "'";
 
-    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupNotExistsCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupExistsCallback, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
@@ -213,6 +251,12 @@ void Database::checkIfGroupNotExists()
     }
 }
 
+/*
+* Method assemble SQL command from parameters saved in class variables and parts of strings. When
+* adding new value, it needs to be checked if it's first entry. If so, different string parts are
+* added to the final command. After assembling, SQL command is executed and report of success is
+* printed in terminal.
+*/
 void Database::insert()
 {
     string SQLInsert =  "INSERT INTO RULE (";
@@ -238,7 +282,7 @@ void Database::insert()
             cerr << "Do not use device attributes when group already exists.\n";
             throw FAILED;
         }
-        checkIfGroupNotExists();
+        checkIfGroupExists();
     }
 
     if (!deviceClass.empty())
@@ -402,6 +446,9 @@ void Database::insert()
     cout << "Rule successfully added\n";
 }
 
+/*
+* Execute SQL command which shows all rules from database and their values.
+*/
 void Database::show()
 {
     int rc;
@@ -416,6 +463,9 @@ void Database::show()
     }
 }
 
+/*
+* Execute SQL command which removes rule from database with given rule ID.
+*/
 void Database::remove()
 {
     int rc;
@@ -430,7 +480,10 @@ void Database::remove()
     }
 }
 
-int Database::checkIfGroupExistsCallback(void *data, int argc, char **argv, char **azColName)
+/*
+* Callback for SQL command which check if given group dosn't exist.
+*/
+int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **azColName)
 {
     if(**argv != '0')
     {
@@ -440,7 +493,10 @@ int Database::checkIfGroupExistsCallback(void *data, int argc, char **argv, char
     return 0;
 }
 
-void Database::checkIfGroupExists()
+/*
+* Check if group ID was given and execute SQL command which check if given group dosn't exist.
+*/
+void Database::checkIfGroupNotExists()
 {
     int rc;
     char *errmsg = NULL;
@@ -454,7 +510,7 @@ void Database::checkIfGroupExists()
 
     SQLCheck = "SELECT COUNT() FROM RULE WHERE GROUP_ID='" + groupID + "'";
 
-    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupExistsCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupNotExistsCallback, NULL, &errmsg);
     if (rc)
     {
         cerr << "Could not execute command, " << errmsg << "\n";
@@ -462,6 +518,10 @@ void Database::checkIfGroupExists()
     }
 }
 
+/*
+* Check if there are any interface attributes when creating new rule group, because only device
+* attributes are allowed in this case.
+*/
 void Database::attributesCheck()
 {
     if (!(interfaceSubclass.empty() & interfaceClass.empty()))
@@ -486,7 +546,7 @@ int main(int argc, char **argv)
 
         if(database->newGroup)
         {
-            database->checkIfGroupExists();
+            database->checkIfGroupNotExists();
             database->attributesCheck();
         }
 
