@@ -1,5 +1,5 @@
 # USBControl
-USBControl, Linux commandline tool, is able to block potentionaly harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device need to be whitelisted.  
+USBControl, Linux command-line tool, is able to block potentionaly harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device need to be whitelisted.  
 
 ## Prerequisites
 You need to install sqlite3 library to make database working.  

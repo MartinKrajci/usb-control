@@ -268,7 +268,6 @@ void Control::read_rules()
 
     if (GroupFoundFlag)
     {
-        GroupFoundFlag = false;
         rc = sqlite3_exec(db, SQLSelectGroups.c_str(), parse_groups, NULL, &errmsg);
         if (rc)
         {
