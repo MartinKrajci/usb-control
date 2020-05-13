@@ -1,7 +1,7 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        25.4.2020
+* Last date of modification:        12.5.2020
 */
 
 #include "rules.h"
@@ -475,7 +475,14 @@ void Database::remove()
     vector<string>::iterator ruleID;
     for(ruleID = ruleIDs.begin(); ruleID < ruleIDs.end();ruleID++)
     {
+        string SQLDeleteGroup = "DELETE FROM RULE WHERE group_id = (SELECT group_id from RULE WHERE ID = " + *ruleID + " AND is_group = 1);";
         string SQLDelete =  "DELETE FROM RULE WHERE ID = " + *ruleID + ";";
+
+        rc = sqlite3_exec(db, SQLDeleteGroup.c_str(), callback, NULL, &errmsg);
+        if (rc)
+        {
+            throw DatabaseExc("Could not execute command", string(errmsg));
+        }
 
         rc = sqlite3_exec(db, SQLDelete.c_str(), callback, NULL, &errmsg);
         if (rc)
@@ -520,6 +527,9 @@ void Database::checkIfGroupNotExists()
     }
 }
 
+/*
+* Load attributes of device on given path.
+*/
 void Database::loadAttributes(string path)
 {
     ifstream fDeviceClass;
@@ -527,26 +537,25 @@ void Database::loadAttributes(string path)
     ifstream fVendor;
     ifstream fProduct;
     ifstream fPort;
-    fDeviceClass.exceptions(ifstream::failbit);
-    fDeviceSubclass.exceptions(ifstream::failbit);
-    fVendor.exceptions(ifstream::failbit);
-    fProduct.exceptions(ifstream::failbit);
-    fPort.exceptions(ifstream::failbit);
+    ifstream fInterfacesTotal;
     fDeviceClass.open(path + "/bDeviceClass");
     fDeviceSubclass.open(path + "/bDeviceSubClass");
     fVendor.open(path + "/idVendor");
     fProduct.open(path + "/idProduct");
     fPort.open(path + "/devpath");
+    fInterfacesTotal.open(path + "/bNumInterfaces");
     getline(fDeviceClass, deviceClass);
     getline(fDeviceSubclass, deviceSubclass);
     getline(fVendor, vendor);
     getline(fProduct, product);
     getline(fPort, port);
+    getline(fInterfacesTotal, interfacesTotal);
     fDeviceClass.close();
     fDeviceSubclass.close();
     fVendor.close();
     fProduct.close();
     fPort.close();
+    fInterfacesTotal.close();
 }
 
 /*
@@ -560,7 +569,7 @@ int Database::find_last_folder(const char *path)
 }
 
 /*
-* 
+* Check for all USB devices connected to the system, then add new rules based on their attributes.
 */
 void Database::setDefaultRules()
 {

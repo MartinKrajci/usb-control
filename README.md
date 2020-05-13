@@ -16,7 +16,7 @@ Run `make` command in project directory.
 ### Make database of rules
 To run USBControl tool, database of rules is needed.  
 
-#### Create default rules  
+#### Create default rules
 ```
 ./bin/rules -t
 ```
@@ -28,7 +28,7 @@ Rules created with this option are based on devices, already connected in the sy
 ./bin/rules -a {-d <ARG>} {-e <ARG>} {-v <ARG>} {-p <ARG>} {-i <ARG>} {-u <ARG>} {-c <ARG>} {-o <ARG>} {-g <ARG>} {-n}
 ```
 long option: --addrule  
-When adding new rule, one or more parameters can be used.
+When adding new rule, one or more parameters can be used.  
 Note: Application needs to be restarted before any newly added rules can be used.  
 
 ##### -d
