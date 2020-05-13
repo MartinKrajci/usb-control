@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        12.5.2020
+*/
+
 #ifndef RULES
 #define RULES
 
@@ -5,11 +11,15 @@
 #include <string>
 #include <cstring>
 #include <regex>
+#include <filesystem>
+#include <fstream>
+#include <regex>
 
 #include <sqlite3.h>
 #include <getopt.h>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 class Database
 {
@@ -34,12 +44,15 @@ class Database
     void checkIfTwoHex(string arg);
     void checkIfFourHex(string arg);
     void checkIfNum(string arg);
+    void loadAttributes(string path);
+    int find_last_folder(const char *path);
 
     public:
         bool createRule = false;
         bool showRules = false;
         bool newGroup = false;
-        string ruleID;
+        bool defaultRules = false;
+        vector<string> ruleIDs;
 
         static Database *getDatabase();
         void checkIfGroupExists();
@@ -49,6 +62,7 @@ class Database
         void insert();
         void show();
         void remove();
+        void setDefaultRules();
 
 };
 

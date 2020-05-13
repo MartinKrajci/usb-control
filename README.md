@@ -5,7 +5,9 @@ USBControl, Linux command-line tool, is able to block potentionaly harmfull USB 
 You need to install sqlite3 library to make database working.  
    ```sudo dnf install libsqlite3x-devel```  
 or (depends on your linux distro)  
-   ```sudo apt-get install libsqlite3-dev```
+   ```sudo apt-get install libsqlite3-dev```  
+  
+Also GCC of version 8 or higher is required.  
 
 ## Instalation
 Run `make` command in project directory.  
@@ -14,12 +16,20 @@ Run `make` command in project directory.
 ### Make database of rules
 To run USBControl tool, database of rules is needed.  
 
+#### Create default rules  
+```
+./bin/rules -t
+```
+long option: --set-default-rules  
+Rules created with this option are based on devices, already connected in the system.  
+
 #### Save new rule
 ```
 ./bin/rules -a {-d <ARG>} {-e <ARG>} {-v <ARG>} {-p <ARG>} {-i <ARG>} {-u <ARG>} {-c <ARG>} {-o <ARG>} {-g <ARG>} {-n}
 ```
 long option: --addrule  
 When adding new rule, one or more parameters can be used.
+Note: Application needs to be restarted before any newly added rules can be used.  
 
 ##### -d
 long option: --device-class  

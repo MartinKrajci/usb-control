@@ -5,13 +5,14 @@
 */
 
 #include "rules.h"
+#include "exceptions.cpp"
 
 #define FAILED 1
 
 using namespace std;
+namespace fs = std::filesystem;
 
 Database *Database::database;
-
 
 /*
 * Database constructor. Open database file and create a new table for rules, if one already don't exist.
@@ -36,15 +37,13 @@ Database::Database()
     rc = sqlite3_open("database/db", &db);
     if (rc) 
     {
-        cerr << "Could not open database\n";
-        throw FAILED;
+        throw DatabaseExc("Could not open database", string(errmsg));
     }
 
     rc = sqlite3_exec(db, SQLCreate.c_str(), callback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 }
 
@@ -71,8 +70,7 @@ void Database::checkIfTwoHex(string arg)
 
     if (!regex_match(string(arg), twoHex))
     {
-        cerr << "Wrong input! Expecting argument in form of two hex numbers.\n";
-        throw FAILED;
+        throw BadArgExc("twoHex", "Wrong input! Expecting argument in form of two hex numbers.");
     }
 }
 
@@ -85,8 +83,7 @@ void Database::checkIfFourHex(string arg)
 
     if (!regex_match(string(arg), fourHex))
     {
-        cerr << "Wrong input! Expecting argument in form of four hex numbers.\n";
-        throw FAILED;
+        throw BadArgExc( "fourHex", "Wrong input! Expecting argument in form of four hex numbers.");
     }
 }
 
@@ -99,8 +96,7 @@ void Database::checkIfNum(string arg)
 
     if (!regex_match(string(arg), num))
     {
-        cerr << "Wrong input! Expecting argument of type number.\n";
-        throw FAILED;
+        throw BadArgExc("num", "Wrong input! Expecting argument of type number.");
     }
 }
 
@@ -128,11 +124,12 @@ void Database::parseArguments(int argc, char **argv)
         {"port", required_argument, 0, 'o'},
         {"group-id", required_argument, 0, 'g'},
         {"new-group", no_argument, 0, 'n'},
+        {"set-default-rules", no_argument, 0, 't'},
         {0, 0, 0, 0}
     };
 
 
-    while ((opt = getopt_long(argc, argv, "asnx:d:i:h:e:u:v:p:c:o:g:", longopts, &opt_index)) != -1)
+    while ((opt = getopt_long(argc, argv, "-asntx:d:i:h:e:u:v:p:c:o:g:", longopts, &opt_index)) != -1)
     {
         switch (opt)
         {
@@ -141,7 +138,7 @@ void Database::parseArguments(int argc, char **argv)
             break;
         case 'x':
             checkIfNum(string(optarg));
-            ruleID = string(optarg);
+            ruleIDs.push_back(string(optarg));
             break;
         case 's':
             showRules = true;
@@ -193,9 +190,20 @@ void Database::parseArguments(int argc, char **argv)
         case 'n':
             newGroup = true;
             break;
-        default:
-            throw FAILED;
+        case 't':
+            defaultRules = true;
             break;
+        default:
+            if(!ruleIDs.empty())
+            {
+                checkIfNum(string(optarg));
+                ruleIDs.push_back(string(optarg));
+            }
+            else
+            {
+                throw GeneralExc("Unrecognized option or argument \"" + string(optarg) + "\"");
+                break;
+            }
         }
     }
 }
@@ -226,8 +234,7 @@ int Database::checkIfGroupExistsCallback(void *data, int argc, char **argv, char
 {
     if(**argv == '0')
     {
-        cerr << "Group with this ID do not exists! Use '-n' parameter to create a new one.\n";
-        throw FAILED;
+        throw BadArgExc("groupID", "Group with this ID do not exists! Use '-n' parameter to create a new one.");
     }
     return 0;
 }
@@ -246,8 +253,7 @@ void Database::checkIfGroupExists()
     rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupExistsCallback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 }
 
@@ -268,10 +274,9 @@ void Database::insert()
     int rc;
     char *errmsg = NULL;
 
-    if (!(createRule & hasAttribute))
+    if (!(createRule & hasAttribute) & !defaultRules)
     {
-        cerr << "Missing arguments for rule creation!\n";
-        throw FAILED;
+        throw BadParamExc("-a", "Missing arguments for rule creation.");
     }
 
     if (!groupID.empty() & !newGroup)
@@ -279,8 +284,7 @@ void Database::insert()
         if(!deviceClass.empty() | !deviceSubclass.empty() | !vendor.empty() |
            !product.empty() | !interfacesTotal.empty() | !port.empty())
         {
-            cerr << "Do not use device attributes when group already exists.\n";
-            throw FAILED;
+            throw BadParamExc("-g", "Do not use device attributes when group already exists.");
         }
         checkIfGroupExists();
     }
@@ -440,8 +444,7 @@ void Database::insert()
     rc = sqlite3_exec(db, SQLInsert.c_str(), callback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
     cout << "Rule successfully added\n";
 }
@@ -458,8 +461,7 @@ void Database::show()
     rc = sqlite3_exec(db, SQLSelect.c_str(), callback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 }
 
@@ -470,13 +472,16 @@ void Database::remove()
 {
     int rc;
     char *errmsg = NULL;
-    string SQLDelete =  "DELETE FROM RULE WHERE ID = " + ruleID + ";";
-
-    rc = sqlite3_exec(db, SQLDelete.c_str(), callback, NULL, &errmsg);
-    if (rc)
+    vector<string>::iterator ruleID;
+    for(ruleID = ruleIDs.begin(); ruleID < ruleIDs.end();ruleID++)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        string SQLDelete =  "DELETE FROM RULE WHERE ID = " + *ruleID + ";";
+
+        rc = sqlite3_exec(db, SQLDelete.c_str(), callback, NULL, &errmsg);
+        if (rc)
+        {
+            throw DatabaseExc("Could not execute command", string(errmsg));
+        }
     }
 }
 
@@ -487,8 +492,7 @@ int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, c
 {
     if(**argv != '0')
     {
-        cerr << "Group with this ID already exists\n";
-        throw FAILED;
+        throw BadArgExc("groupID", "Group with this ID already exists.");
     }
     return 0;
 }
@@ -504,8 +508,7 @@ void Database::checkIfGroupNotExists()
 
     if(groupID.empty())
     {
-        cerr << "Group ID needs to be specified when creating new group\n";
-        throw FAILED;
+        throw BadArgExc("groupID", "Group ID needs to be specified when creating new group.");
     }
 
     SQLCheck = "SELECT COUNT() FROM RULE WHERE GROUP_ID='" + groupID + "'";
@@ -513,8 +516,63 @@ void Database::checkIfGroupNotExists()
     rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupNotExistsCallback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
+    }
+}
+
+void Database::loadAttributes(string path)
+{
+    ifstream fDeviceClass;
+    ifstream fDeviceSubclass;
+    ifstream fVendor;
+    ifstream fProduct;
+    ifstream fPort;
+    fDeviceClass.exceptions(ifstream::failbit);
+    fDeviceSubclass.exceptions(ifstream::failbit);
+    fVendor.exceptions(ifstream::failbit);
+    fProduct.exceptions(ifstream::failbit);
+    fPort.exceptions(ifstream::failbit);
+    fDeviceClass.open(path + "/bDeviceClass");
+    fDeviceSubclass.open(path + "/bDeviceSubClass");
+    fVendor.open(path + "/idVendor");
+    fProduct.open(path + "/idProduct");
+    fPort.open(path + "/devpath");
+    getline(fDeviceClass, deviceClass);
+    getline(fDeviceSubclass, deviceSubclass);
+    getline(fVendor, vendor);
+    getline(fProduct, product);
+    getline(fPort, port);
+    fDeviceClass.close();
+    fDeviceSubclass.close();
+    fVendor.close();
+    fProduct.close();
+    fPort.close();
+}
+
+/*
+* Return position of string when last folder starts.
+*/
+int Database::find_last_folder(const char *path)
+{
+    int i = strlen(path);
+    for(; path[i] != '/'; i--);
+    return i + 1;
+}
+
+/*
+* 
+*/
+void Database::setDefaultRules()
+{
+    regex interface("\\d+-\\d+:\\d+.\\d+");
+
+    for (const auto &item : fs::directory_iterator("/sys/bus/usb/devices/"))
+    {
+        if(fs::is_directory(item) & !(regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), interface)))
+        {
+            loadAttributes(item.path());
+            insert();
+        }
     }
 }
 
@@ -526,8 +584,7 @@ void Database::attributesCheck()
 {
     if (!(interfaceSubclass.empty() & interfaceClass.empty()))
     {
-        cerr << "Do not use interface attributes when creating new group!\n";
-        throw FAILED;
+        throw BadParamExc("-n", "Do not use interface attributes when creating new group.");
     }
 }
 
@@ -538,10 +595,9 @@ int main(int argc, char **argv)
         Database *database = Database::getDatabase();
 
         database->parseArguments(argc, argv);
-        if (!(database->createRule | database->showRules | !database->ruleID.empty()))
+        if (!(database->createRule | database->showRules | !database->ruleIDs.empty() | database->defaultRules))
         {
-            cerr << "No action specified.\n";
-            return 1;
+            throw BadParamExc("", "No action specified");
         }
 
         if(database->newGroup)
@@ -560,13 +616,39 @@ int main(int argc, char **argv)
             database->show();
         }
 
-        if(!database->ruleID.empty())
+        if(!database->ruleIDs.empty())
         {
             database->remove();
         }
+
+        if(database->defaultRules)
+        {
+            database->setDefaultRules();
+        }
     }
-    catch (int)
+    catch(BadParamExc& e)
     {
+        cerr << e.what() << "\n";
+        return 1;
+    }
+    catch(BadArgExc& e)
+    {
+        cerr << e.what() << "\n";
+        return 1;
+    }
+    catch(DatabaseExc& e)
+    {
+        cerr << e.what() << "\n";
+        return 1;
+    }
+    catch(GeneralExc& e)
+    {
+        cerr << e.what() << "\n";
+        return 1;
+    }
+    catch(...)
+    {
+        cerr << "Unexpected error\n";
         return 1;
     }
 

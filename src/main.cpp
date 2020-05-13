@@ -15,33 +15,47 @@ int main()
     signal(SIGTERM, (__sighandler_t ) at_exit);
     signal(SIGTSTP, (__sighandler_t ) at_exit);
 
+    if (geteuid())
+    {
+        cerr << "This tool has to be run with root privileges.\n";
+        return 1;
+    }
+
     try
     {
+        if (geteuid()) throw 1;
         con->read_rules();
         Netlink mon;
         mon.init_enviroment();
         mon.listen_events();
     }
-    catch(ifstream::failure)
+    catch(bad_alloc& e)
     {
-        cerr << "Could not open file. This tool has to be run with root privileges.\n";
+        cerr << e.what() << "\n";
         at_exit();
         return 1;
     }
-    catch(bad_alloc)
+    catch(SocketExc& e)
     {
-        cerr << "Could not allocate memory.\n";
+        cerr << e.what() << "\n";
         at_exit();
         return 1;
     }
-    catch(int)
+    catch(DatabaseExc& e)
     {
+        cerr << e.what() << "\n";
+        at_exit();
+        return 1;
+    }
+    catch(GeneralExc& e)
+    {
+        cerr << e.what() << "\n";
         at_exit();
         return 1;
     }
     catch(...)
     {
-        std::cerr << "Unexpected error.\n";
+        cerr << "Unexpected error\n";
         at_exit();
         return 1;
     }

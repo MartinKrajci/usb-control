@@ -3,11 +3,12 @@ all: control rules
 control:
 	g++ -std=c++17 -c src/usb-control.cpp -o build/usb-control.o
 	g++ -std=c++17 -c src/main.cpp -o build/main.o
-	g++ build/usb-control.o build/main.o -o bin/usb-control -l sqlite3 -lstdc++fs
+	g++ -std=c++17 -c src/exceptions.cpp -o build/exceptions.o
+	g++ build/usb-control.o build/main.o build/exceptions.o -o bin/usb-control -l sqlite3 -lstdc++fs
 
 rules:
-	g++ -c src/rules.cpp -o build/rules.o
-	g++ build/rules.o -o bin/rules -l sqlite3
+	g++ -std=c++17 -c src/rules.cpp -o build/rules.o
+	g++ build/rules.o -o bin/rules -l sqlite3 -lstdc++fs
 
 clean:
 	rm build/usb-control.o build/main.o build/rules.o

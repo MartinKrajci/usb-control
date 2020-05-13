@@ -27,6 +27,8 @@
 #include <filesystem>
 #include <cstdlib>
 
+#include "exceptions.h"
+
 #define FAILED 1
 
 using namespace std;

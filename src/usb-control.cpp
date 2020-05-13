@@ -20,8 +20,6 @@ void Interface::loadAttributes()
 {
     ifstream fInterfaceClass;
     ifstream fInterfaceSubclass;
-    fInterfaceClass.exceptions(ifstream::failbit);
-    fInterfaceSubclass.exceptions(ifstream::failbit);
     fInterfaceClass.open(path + "/bInterfaceClass");
     fInterfaceSubclass.open(path + "/bInterfaceSubClass");
     getline(fInterfaceClass, interfaceClass);
@@ -38,11 +36,6 @@ void Device::loadAttributes()
     ifstream fVendor;
     ifstream fProduct;
     ifstream fPort;
-    fDeviceClass.exceptions(ifstream::failbit);
-    fDeviceSubclass.exceptions(ifstream::failbit);
-    fVendor.exceptions(ifstream::failbit);
-    fProduct.exceptions(ifstream::failbit);
-    fPort.exceptions(ifstream::failbit);
     fDeviceClass.open(path + "/bDeviceClass");
     fDeviceSubclass.open(path + "/bDeviceSubClass");
     fVendor.open(path + "/idVendor");
@@ -66,18 +59,21 @@ void Device::loadAttributes()
 void Device::disconnect()
 {
     ofstream fAuthorized;
-    fAuthorized.exceptions(ofstream::failbit);
     fAuthorized.open(path + "/authorized");
     fAuthorized << "0";
     fAuthorized.close();
 }
 
-        int Device::find_last_folder(const char *path)
-        {
-            int i = strlen(path);
-            for(; path[i] != '/'; i--);
-            return i + 1;
-        }
+/*
+* Return position of string when last folder starts.
+*/
+int Device::find_last_folder(const char *path)
+{
+    int i = strlen(path);
+    for(; path[i] != '/'; i--);
+    return i + 1;
+}
+
 /*
 * Authorize every interface of device by writing "1" in file named "authorized" in given path on
 * interface level and by writing folder name belonging to this interface into
@@ -93,7 +89,6 @@ void Device::authorize()
     for (interface = interfaces.begin(); interface < (interfaces.end()); interface++)
     {
             ofstream fAuthorized;
-            fAuthorized.exceptions(ifstream::failbit);
             fAuthorized.open(interface->path + "/authorized");
             fAuthorized << "1";
             fDriversProbe = popen("sudo tee /sys/bus/usb/drivers_probe > /dev/null", "w");
@@ -142,8 +137,7 @@ int Control::checkIfNoRulesCallback(void *data, int argc, char **argv, char **co
 {
     if(**argv == '0')
     {
-        cerr << "There are no rules in database!\n";
-        throw FAILED;
+        throw GeneralExc("There are no rules in database.");
     }
     return 0;
 }
@@ -231,39 +225,35 @@ void Control::read_rules()
     string SQLSelectGroups = "SELECT * FROM RULE WHERE GROUP_ID IS NOT NULL";
     char *errmsg = NULL;
 
-    rc = sqlite3_open("database/db", &db);
+
+    rc = sqlite3_open_v2("database/db", &db, SQLITE_OPEN_READWRITE, NULL);
     if (rc) 
     {
-        cerr << "Could not open database\n";
-        throw FAILED;
+        throw GeneralExc("Could not open database. Does it exist?");
     }
 
     rc = sqlite3_exec(db, SQLCheckIfTableExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
     rc = sqlite3_exec(db, SQLCeckIfRulesExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
     rc = sqlite3_exec(db, SQLSelectRules.c_str(), callback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
     rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroupsCallback, NULL, &errmsg);
     if (rc)
     {
-        cerr << "Could not execute command, " << errmsg << "\n";
-        throw FAILED;
+        throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
     if (GroupFoundFlag)
@@ -271,8 +261,7 @@ void Control::read_rules()
         rc = sqlite3_exec(db, SQLSelectGroups.c_str(), parse_groups, NULL, &errmsg);
         if (rc)
         {
-            cerr << "Could not execute command, " << errmsg << "\n";
-            throw FAILED;
+            throw DatabaseExc("Could not execute command", string(errmsg));
         }
     }
 }
@@ -452,12 +441,12 @@ void Control::check_device(Device device)
     if (authorized)
     {
         device.authorize();
-        cout << "Device authorized..\n";
+        cout << "Device with " + device.vendor + ":" + device.product + " vendor:product ID authorized on port " + device.port + "\n";
     }
     else
     {
         device.disconnect();
-        cout << "! Disconnecting potenctialy dangerous device !\n";
+        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID on port " + device.port + "\n";
     }
 }
 
@@ -484,8 +473,7 @@ Netlink::Netlink()
     sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_KOBJECT_UEVENT);
     if (sock < 0)
     {
-        cerr << "Unable to create netlink socket\n";
-        throw FAILED;
+        throw SocketExc("Unable to create netlink socket.");
     }
 
     addr.nl_family = AF_NETLINK;
@@ -494,8 +482,7 @@ Netlink::Netlink()
 
     if (bind(sock, (struct sockaddr *) &addr, sizeof(struct sockaddr_nl)))
     {
-        cerr << "Unable to bind socket\n";
-        throw FAILED;
+        throw SocketExc("Unable to bind socket.");
     }
 
 }
@@ -513,7 +500,6 @@ void Netlink::init_enviroment()
         if(regex_match(string(fs::path(file).filename()), usbFolder))
         {
             ofstream interfaceAuthDefFile;
-            interfaceAuthDefFile.exceptions(ofstream::failbit);
             interfaceAuthDefFile.open(string(fs::path(file)) + "/interface_authorized_default");
             interfaceAuthDefFile << "0";
             interfaceAuthDefFile.close();
@@ -540,7 +526,6 @@ void Netlink::save_device(char *buffer)
     ifstream numInterfacesFile;
     string numInterfaces;
     device.path = "/sys" + string(buffer + 4);
-    numInterfacesFile.exceptions(ifstream::failbit);
     numInterfacesFile.open(device.path + "/bNumInterfaces");
     getline(numInterfacesFile, numInterfaces);
     device.interfacesTotal = stoi(numInterfaces);
@@ -586,8 +571,7 @@ void Netlink::listen_events()
     buffer = (char *) malloc(120);
     if (buffer == NULL)
     {
-        cerr << "Could not allocate memory\n";
-        throw FAILED;
+        throw GeneralExc("Could not allocate memory.");
     }
     
     memset(buffer, 0, 120);
@@ -629,12 +613,11 @@ void at_exit()
         if(regex_match(string(fs::path(file).filename()), usbFolder))
         {
             ofstream interfaceAuthDefFile;
-            interfaceAuthDefFile.exceptions(ifstream::failbit);
             interfaceAuthDefFile.open(string(fs::path(file)) + "/interface_authorized_default");
             interfaceAuthDefFile << "1";
             interfaceAuthDefFile.close();
         }
     }
-    
+
     exit(0);
 }
