@@ -5,12 +5,16 @@
 */
 
 #include "rules.h"
-#include "exceptions.cpp"
 
 #define FAILED 1
 
 using namespace std;
+
+#if __GNUC__ >= 8
 namespace fs = std::filesystem;
+#else
+namespace fs = std::experimental::filesystem;
+#endif
 
 Database *Database::database;
 
@@ -202,8 +206,8 @@ void Database::parseArguments(int argc, char **argv)
             else
             {
                 throw GeneralExc("Unrecognized option or argument \"" + string(optarg) + "\"");
-                break;
             }
+            break;
         }
     }
 }
@@ -635,22 +639,7 @@ int main(int argc, char **argv)
             database->setDefaultRules();
         }
     }
-    catch(BadParamExc& e)
-    {
-        cerr << e.what() << "\n";
-        return 1;
-    }
-    catch(BadArgExc& e)
-    {
-        cerr << e.what() << "\n";
-        return 1;
-    }
-    catch(DatabaseExc& e)
-    {
-        cerr << e.what() << "\n";
-        return 1;
-    }
-    catch(GeneralExc& e)
+    catch(exception& e)
     {
         cerr << e.what() << "\n";
         return 1;

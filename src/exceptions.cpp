@@ -1,3 +1,9 @@
+/*
+* Project name:                     USB Control
+* Author:                           Martin Krajči
+* Last date of modification:        12.5.2020
+*/
+
 #include "exceptions.h"
 
 /*

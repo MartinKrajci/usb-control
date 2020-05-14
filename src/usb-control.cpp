@@ -9,7 +9,11 @@
 #define FAILED 1
 
 using namespace std;
+#if __GNUC__ >= 8
 namespace fs = std::filesystem;
+#else
+namespace fs = std::experimental::filesystem;
+#endif
 
 Control *Control::control;
 

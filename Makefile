@@ -8,10 +8,11 @@ control:
 
 rules:
 	g++ -std=c++17 -c src/rules.cpp -o build/rules.o
-	g++ build/rules.o -o bin/rules -l sqlite3 -lstdc++fs
+	g++ -std=c++17 -c src/exceptions.cpp -o build/exceptions.o
+	g++ build/rules.o build/exceptions.o -o bin/rules -l sqlite3 -lstdc++fs
 
 clean:
-	rm build/usb-control.o build/main.o build/rules.o
+	rm build/usb-control.o build/main.o build/rules.o build/exceptions.o
 
 run:
 	sudo ./bin/usb-control

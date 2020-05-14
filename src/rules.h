@@ -11,15 +11,23 @@
 #include <string>
 #include <cstring>
 #include <regex>
-#include <filesystem>
 #include <fstream>
 #include <regex>
+
+#if __GNUC__ >= 8
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include <sqlite3.h>
 #include <getopt.h>
 
+#include "exceptions.h"
+
 using namespace std;
-namespace fs = std::filesystem;
 
 class Database
 {

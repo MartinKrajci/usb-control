@@ -24,15 +24,21 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <filesystem>
 #include <cstdlib>
+
+#if __GNUC__ >= 8
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include "exceptions.h"
 
 #define FAILED 1
 
 using namespace std;
-namespace fs = std::filesystem;
 
 class InterfaceRule
 {
