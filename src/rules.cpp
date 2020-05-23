@@ -34,14 +34,14 @@ Database::Database()
         "INTERFACE_CLASS        TEXT," \
         "INTERFACE_SUBCLASS     TEXT," \
         "INTERFACE_COUNT        INT," \
-        "PORT                   INT," \
+        "PORT                   TEXT," \
         "GROUP_ID                  INT," \
         "IS_GROUP                  INT);";
 
     rc = sqlite3_open("database/db", &db);
     if (rc) 
     {
-        throw DatabaseExc("Could not open database", string(errmsg));
+        throw GeneralExc("Could not open database. Does it exist?");
     }
 
     rc = sqlite3_exec(db, SQLCreate.c_str(), callback, NULL, &errmsg);
@@ -72,7 +72,7 @@ void Database::checkIfTwoHex(string arg)
 {
     regex twoHex("[0-9a-fA-F]{2}");
 
-    if (!regex_match(string(arg), twoHex))
+    if (!regex_match(arg, twoHex))
     {
         throw BadArgExc("twoHex", "Wrong input! Expecting argument in form of two hex numbers.");
     }
@@ -85,7 +85,7 @@ void Database::checkIfFourHex(string arg)
 {
     regex fourHex("[0-9a-fA-F]{4}");
 
-    if (!regex_match(string(arg), fourHex))
+    if (!regex_match(arg, fourHex))
     {
         throw BadArgExc( "fourHex", "Wrong input! Expecting argument in form of four hex numbers.");
     }
@@ -98,9 +98,22 @@ void Database::checkIfNum(string arg)
 {
     regex num("\\d+");
 
-    if (!regex_match(string(arg), num))
+    if (!regex_match(arg, num))
     {
         throw BadArgExc("num", "Wrong input! Expecting argument of type number.");
+    }
+}
+
+/*
+* Check if given string is of correct format (number or numbers, separated by dot)
+*/
+void Database::checkIfPort(string arg)
+{
+    regex num("\\d+(\\.\\d+)*");
+
+    if (!regex_match(arg, num))
+    {
+        throw BadArgExc("num", "Wrong input! Expecting string describing port as an argument.");
     }
 }
 
@@ -183,7 +196,7 @@ void Database::parseArguments(int argc, char **argv)
             hasAttribute = true;
             break;
         case 'o':
-            checkIfNum(string(optarg));
+            checkIfPort(string(optarg));
             port = string(optarg);
             hasAttribute = true;
             break;
@@ -219,14 +232,34 @@ void Database::parseArguments(int argc, char **argv)
 */
 int Database::callback(void *data, int argc, char **argv, char **column)
 {
+    string middleSeparator =    "---------------------------"\
+                                "---------------------------"\
+                                "---------------------------"\
+                                "---------------------------"\
+                                "-------------------------------";
+    string separator =  "==========================="\
+                        "==========================="\
+                        "==========================="\
+                        "==========================="\
+                        "===============================";
+    cout << separator << "\n|";
+
     for(int i = 0; i<argc; i++)
     {
+        if(i == 5)
+        {
+            cout << "\n";
+            cout << middleSeparator;
+            cout << "\n|";
+        }
+
         if(string(column[i]) != "IS_GROUP")
         {
-            printf("%s = %s | ", column[i], argv[i] ? argv[i] : "*");
+            printf("%18s = %4s | ", column[i], argv[i] ? argv[i] : "*");
         }
     }
-    printf("\n");
+
+    cout << "\n" << separator << "\n\n";
 
    return 0;
 }
@@ -314,12 +347,12 @@ void Database::insert()
         {
             firstEntry = false;
             SQLInsert += "DEVICE_SUBCLASS";
-            SQLInsertValues = SQLInsertValues + partWithoutComma + deviceClass + partWithoutComma;
+            SQLInsertValues = SQLInsertValues + partWithoutComma + deviceSubclass + partWithoutComma;
         }
         else
         {
             SQLInsert = SQLInsert + comma + "DEVICE_SUBCLASS";
-            SQLInsertValues = SQLInsertValues + partWithComma + deviceClass + "\'";   
+            SQLInsertValues = SQLInsertValues + partWithComma + deviceSubclass + "\'";   
         }
     }
 
@@ -461,12 +494,19 @@ void Database::show()
     int rc;
     char *errmsg = NULL;
     string SQLSelect = "SELECT * FROM RULE";
+    string separator =  "==========================="\
+                        "==========================="\
+                        "==========================="\
+                        "==========================="\
+                        "===============================";
     
     rc = sqlite3_exec(db, SQLSelect.c_str(), callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
     }
+
+    //cout << separator << "\n";
 }
 
 /*

@@ -434,6 +434,8 @@ void Control::clean_groups()
 void Control::check_device(Device device)
 {
     bool authorized = false;
+    vector<Interface>::iterator interface;
+    int counter = 0;
 
     authorized = authorized | check_for_rule(device);
     if(GroupFoundFlag)
@@ -445,12 +447,26 @@ void Control::check_device(Device device)
     if (authorized)
     {
         device.authorize();
-        cout << "Device with " + device.vendor + ":" + device.product + " vendor:product ID authorized on port " + device.port + "\n";
+        cout << "Device with " + device.vendor + ":" + device.product + " vendor:product ID\n";
+        cout << "with interface(s):\n";
+        for( interface = device.interfaces.begin(); interface < device.interfaces.end(); interface++)
+        {
+            counter++;
+            cout << "(" << counter << ")\tclass: " << interface->interfaceClass << ", sublclass: " << interface->interfaceSubclass << "\n";
+        }
+        cout << "authorized on port " + device.port + "\n\n";
     }
     else
     {
         device.disconnect();
-        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID on port " + device.port + "\n";
+        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID\n";
+        cout << "with interface(s):\n";
+        for( interface = device.interfaces.begin(); interface < device.interfaces.end(); interface++)
+        {
+            counter++;
+            cout << "(" << counter << ")\tclass: " << interface->interfaceClass << ", sublclass: " << interface->interfaceSubclass << "\n";
+        }
+        cout << "on port " + device.port + "\n\n";
     }
 }
 
@@ -580,8 +596,8 @@ void Netlink::listen_events()
     
     memset(buffer, 0, 120);
 
-    regex device("\\d+-\\d+");
-    regex interface("\\d+-\\d+:\\d+.\\d+");
+    regex device("\\d+-\\d+(\\.\\d)*");
+    regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
 
     while(1)
     {

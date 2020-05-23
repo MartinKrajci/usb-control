@@ -52,6 +52,7 @@ class Database
     void checkIfTwoHex(string arg);
     void checkIfFourHex(string arg);
     void checkIfNum(string arg);
+    void checkIfPort(string arg);
     void loadAttributes(string path);
     int find_last_folder(const char *path);
 
