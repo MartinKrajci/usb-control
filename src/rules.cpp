@@ -109,9 +109,9 @@ void Database::checkIfNum(string arg)
 */
 void Database::checkIfPort(string arg)
 {
-    regex num("\\d+(\\.\\d+)*");
+    regex port("\\d+(\\.\\d+)*");
 
-    if (!regex_match(arg, num))
+    if (!regex_match(arg, port))
     {
         throw BadArgExc("num", "Wrong input! Expecting string describing port as an argument.");
     }
@@ -617,7 +617,7 @@ int Database::find_last_folder(const char *path)
 */
 void Database::setDefaultRules()
 {
-    regex interface("\\d+-\\d+:\\d+.\\d+");
+    regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
 
     for (const auto &item : fs::directory_iterator("/sys/bus/usb/devices/"))
     {
