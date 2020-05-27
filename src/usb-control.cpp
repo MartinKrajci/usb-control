@@ -112,6 +112,7 @@ void Control::save_rules(char **argv)
     static Control *con = Control::getControl();
     Rule *rule = new Rule;
 
+    rule->ID = (argv[0] ? argv[0] : "NULL");
     rule->deviceClass = (argv[1] ? argv[1] : "NULL");
     rule->deviceSubclass = (argv[2] ? argv[2] : "NULL");
     rule->vendor = (argv[3] ? argv[3] : "NULL");
@@ -275,7 +276,7 @@ void Control::read_rules()
 * rules which could satisfy device and its interafaces were found, method returns false, otherwise
 * true.
 */
-bool Control::check_for_rule(Device device)
+bool Control::check_for_rule(Device device, string *ruleID)
 {
     vector<Rule *>::iterator rule;
 
@@ -317,11 +318,8 @@ bool Control::check_for_rule(Device device)
             }
             else
             {
-                if((currentInterface + 1) == device.interfacesTotal)
-                {
-                    return true;
-                }
-                break;
+                *ruleID = (*rule)->ID;
+                return true;
             }
         }
     }
@@ -335,7 +333,7 @@ bool Control::check_for_rule(Device device)
 * Every interface rule can be used only once. If no match is found, method returns false, otherwise
 * true. 
 */
-bool Control::check_for_group(Device device)
+bool Control::check_for_group(Device device, string *groupID)
 {
     vector<RulesGroup *>::iterator group;
 
@@ -395,6 +393,7 @@ bool Control::check_for_group(Device device)
                     {
                         if((currentInterface + 1) == device.interfacesTotal)
                         {
+                            *groupID = (*group)->groupID;
                             return true;
                         }
                         (*interface)->wasUsed = true;
@@ -436,25 +435,35 @@ void Control::check_device(Device device)
     bool authorized = false;
     vector<Interface>::iterator interface;
     int counter = 0;
+    string ruleID;
+    string groupID;
 
-    authorized = authorized | check_for_rule(device);
-    if(GroupFoundFlag)
+    authorized = authorized | check_for_rule(device, &ruleID);
+    if(GroupFoundFlag && !authorized)
     {
-        authorized = authorized | check_for_group(device);
+        authorized = authorized | check_for_group(device, &groupID);
         clean_groups();
     }
 
     if (authorized)
     {
         device.authorize();
-        cout << "Device with " + device.vendor + ":" + device.product + " vendor:product ID\n";
+        cout << "Device with " + device.vendor + ":" + device.product + " vendor:product ID and class: " + device.deviceClass + ", subclass: " + device.deviceSubclass + "\n";
         cout << "with interface(s):\n";
         for( interface = device.interfaces.begin(); interface < device.interfaces.end(); interface++)
         {
             counter++;
             cout << "(" << counter << ")\tclass: " << interface->interfaceClass << ", sublclass: " << interface->interfaceSubclass << "\n";
         }
-        cout << "authorized on port " + device.port + "\n\n";
+        cout << "authorized on port " + device.port + "\n";
+        if(!ruleID.empty())
+        {
+            cout << "Authorization based on rule " + ruleID + "\n\n";
+        }
+        else if(!groupID.empty())
+        {
+            cout << "Authorization based on group " + groupID + "\n\n";
+        }
     }
     else
     {

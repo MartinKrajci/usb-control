@@ -38,22 +38,26 @@ class Database
     string interfaceClass;
     string deviceSubclass;
     string interfaceSubclass;
-    string deviceSublclass;
     string vendor;
     string product;
     string interfacesTotal;
     string port;
     string groupID;
+    string nextFreeGroupID = "1";
 
     Database();
     static int callback(void *data, int argc, char **argv, char **column);
     static int checkIfGroupExistsCallback(void *data, int argc, char **argv, char **column);
     static int checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **column);
+    static int findGroupID(void *data, int argc, char **argv, char **column);
     void checkIfTwoHex(string arg);
     void checkIfFourHex(string arg);
     void checkIfNum(string arg);
     void checkIfPort(string arg);
-    void loadAttributes(string path);
+    void loadInterfaceAttributes(string path);
+    void loadDeviceAttributes(string path);
+    void clearDeviceAttributes();
+    void clearInterfaceAttributes();
     int find_last_folder(const char *path);
 
     public:
@@ -72,6 +76,7 @@ class Database
         void show();
         void remove();
         void setDefaultRules();
+        void init();
 
 };
 

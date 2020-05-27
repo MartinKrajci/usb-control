@@ -65,6 +65,7 @@ class RulesGroup
 class Rule
 {
     public:
+        string ID;
         string deviceClass;
         string deviceSubclass;
         string vendor;
@@ -122,8 +123,8 @@ class Control
         static int parse_groups(void *data, int argc, char **argv, char **column);
         static void save_groups(char **argv);
         static void save_interface_rule(char **argv);
-        bool check_for_rule(Device device);
-        bool check_for_group(Device device);
+        bool check_for_rule(Device device, string *ID);
+        bool check_for_group(Device device, string *ID);
         void clean_groups();
 
     public:

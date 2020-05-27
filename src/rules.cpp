@@ -407,7 +407,7 @@ void Database::insert()
         {
             firstEntry = false;
             SQLInsert += "PRODUCT";
-            SQLInsertValues = SQLInsertValues + partWithoutComma + interfaceClass + partWithoutComma;                
+            SQLInsertValues = SQLInsertValues + partWithoutComma + product + partWithoutComma;                
         }
         else
         {
@@ -539,7 +539,7 @@ void Database::remove()
 /*
 * Callback for SQL command which check if given group dosn't exist.
 */
-int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **azColName)
+int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **column)
 {
     if(**argv != '0')
     {
@@ -572,9 +572,24 @@ void Database::checkIfGroupNotExists()
 }
 
 /*
+* Load attributes of interface on given path.
+*/
+void Database::loadInterfaceAttributes(string path)
+{
+    ifstream fInterfaceClass;
+    ifstream fInterfaceSubclass;
+    fInterfaceClass.open(path + "/bInterfaceClass");
+    fInterfaceSubclass.open(path + "/bInterfaceSubClass");
+    getline(fInterfaceClass, interfaceClass);
+    getline(fInterfaceSubclass, interfaceSubclass);
+    fInterfaceClass.close();
+    fInterfaceSubclass.close();
+}
+
+/*
 * Load attributes of device on given path.
 */
-void Database::loadAttributes(string path)
+void Database::loadDeviceAttributes(string path)
 {
     ifstream fDeviceClass;
     ifstream fDeviceSubclass;
@@ -615,7 +630,7 @@ int Database::find_last_folder(const char *path)
 /*
 * Check for all USB devices connected to the system, then add new rules based on their attributes.
 */
-void Database::setDefaultRules()
+/*void Database::setDefaultRules()
 {
     regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
 
@@ -625,6 +640,62 @@ void Database::setDefaultRules()
         {
             loadAttributes(item.path());
             insert();
+        }
+    }
+}*/
+
+void Database::clearDeviceAttributes()
+{
+    deviceClass.clear();
+    deviceSubclass.clear();
+    vendor.clear();
+    product.clear();
+    interfacesTotal.clear();
+    port.clear();
+    newGroup = false;
+}
+
+void Database::clearInterfaceAttributes()
+{
+    interfaceClass.clear();
+    interfaceSubclass.clear();
+}
+
+void Database::setDefaultRules()
+{
+    regex device("\\d+-\\d+(\\.\\d)*");
+    regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
+    regex usbFolder("usb\\d+");
+
+    for (const auto &item : fs::directory_iterator("/sys/bus/usb/devices/"))
+    {
+        if(fs::is_directory(item))
+        {
+            if((regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), usbFolder)))
+            {
+                loadDeviceAttributes(item.path());
+                insert();
+                clearDeviceAttributes();
+            }
+            else if((regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), device)))
+            {
+                loadDeviceAttributes(item.path());
+                groupID = nextFreeGroupID;
+                newGroup = true;
+                insert();
+                clearDeviceAttributes();
+                for (const auto &interfaceItem : fs::directory_iterator(item.path()))
+                {
+                    if((regex_match(string(interfaceItem.path().c_str() + find_last_folder(interfaceItem.path().c_str())), interface)))
+                    {
+                        loadInterfaceAttributes(interfaceItem.path());
+                        insert();
+                        clearInterfaceAttributes();
+                    }
+                }
+                nextFreeGroupID = to_string((stoi(nextFreeGroupID)) + 1);
+                groupID.clear();
+            }
         }
     }
 }
@@ -641,6 +712,33 @@ void Database::attributesCheck()
     }
 }
 
+int Database::findGroupID(void *data, int argc, char **argv, char **column)
+{
+    if(*argv == NULL)
+    {
+        database->nextFreeGroupID = "1";
+    }
+    else
+    {
+        database->nextFreeGroupID = string(*argv);
+    }
+
+    return 0;
+}
+
+void Database::init()
+{
+    int rc;
+    string SQLfindGroupID = "SELECT MAX(GROUP_ID) FROM RULE;";
+    char *errmsg = NULL;
+
+    rc = sqlite3_exec(db, SQLfindGroupID.c_str(), findGroupID, NULL, &errmsg);
+    if (rc)
+    {
+        throw DatabaseExc("Could not execute command", string(errmsg));
+    }
+}
+
 int main(int argc, char **argv)
 {
     try
@@ -652,6 +750,8 @@ int main(int argc, char **argv)
         {
             throw BadParamExc("", "No action specified");
         }
+
+        database->init();
 
         if(database->newGroup)
         {
