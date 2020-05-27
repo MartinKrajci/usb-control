@@ -12,7 +12,7 @@ rules:
 	g++ build/rules.o build/exceptions.o -o bin/rules -l sqlite3 -lstdc++fs
 
 clean:
-	rm build/usb-control.o build/main.o build/rules.o build/exceptions.o
+	rm build/* database/* bin/*
 
 run:
 	sudo ./bin/usb-control

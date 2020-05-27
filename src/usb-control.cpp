@@ -308,7 +308,7 @@ bool Control::check_for_rule(Device device, string *ruleID)
             {
                 continue;
             }
-            else if(device.port != (*rule)->port && (*rule)->port != "NULL")
+            else if(device.port.find((*rule)->port) == string::npos && (*rule)->port != "NULL")
             {
                 continue;
             }

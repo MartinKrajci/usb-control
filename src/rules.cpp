@@ -109,7 +109,7 @@ void Database::checkIfNum(string arg)
 */
 void Database::checkIfPort(string arg)
 {
-    regex port("\\d+(\\.\\d+)*");
+    regex port("\\d+(\\.\\d+)*(\\.){0,1}");
 
     if (!regex_match(arg, port))
     {
