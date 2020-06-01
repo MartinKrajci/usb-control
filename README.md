@@ -1,5 +1,5 @@
 # USBControl
-USBControl, Linux command-line tool, is able to block potentionaly harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device need to be whitelisted.  
+USBControl, Linux command-line tool, is able to block potentionaly harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device needs to be whitelisted. There are two types of rules which can be used in the creation of whitelist - individual rules and groups of rules. The difference is how application deals with interfaces. When using individual rules, interface attributes needs to match only with one interface. When comparing newly connected device to group of rules, every interface of device needs to find a match with interface rule in group of rules, while every interface rule can be used only once. Groups of rules represent more accurate way to describe devices.  
 
 ## Prerequisites
 You need to install sqlite3 library to make database working.  
@@ -68,7 +68,7 @@ tip: You can find what numbers your ports have by inserting known and trusted de
 
 ##### -n
 long option: --new-group  
-description: Create a new group. You can create groups of rules, where new groups will consist only of device attributes (everything except interface class and subclass). Later, you can add new rules to the same group with interface attributes (interface class and subclass). When comparing newly connected device to group of rules, every interface of device needs to find a match with interface rule in group of rules, while every interface rule can be used only once. This option needs to be used with `-g` parameter.  
+description: Create a new group. You can create groups of rules, where new groups will consist only of device attributes (everything except interface class and subclass). Later, you can add new rules to the same group with interface attributes (interface class and subclass). This option needs to be used with `-g` parameter.  
 
 ##### -g
 long option: --group-id  
@@ -120,6 +120,7 @@ Tip: When output seems to be broken, try to expand terminals width.
 ```
 long option: --remove-rule  
 You can remove any rule by typing ` -x` parameter and using ID of rule you want to remove as argument. Using more IDs in the same time is supported. Also it's possible to write string "all" as an argument, to delete all rules in database.  
+Note: When ID of group is used as an argument, the group is removed including all rules inside.  
 
 #### Examples
 ```
@@ -142,7 +143,7 @@ Run tool in project root directory with
 ```
 make run
 ```
-You will be promped to type your password. Every new USB device from now will be checked against your database of rules. In case that new device will get authorized, message "Device auhtorized" will appear, "! Disconnecting potenctialy dangerous device !" otherwise.  
+You will be promped to type your password. Every new USB device from now will be checked against your database of rules. In case that new device will get authorized, message "Device.. auhtorized.." will appear, "Disconnecting potenctialy dangerous device.." otherwise. In both cases, additional info like vendor and product ID, class, subclass and port is displayed.  
 
 ### Exiting application
 You can exit this tool by pressing combination ` CTRL + C` .  
