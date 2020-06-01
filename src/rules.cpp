@@ -128,8 +128,8 @@ void Database::parseArguments(int argc, char **argv)
 
     const struct option longopts[] = 
     {
-        {"addrule", no_argument, 0, 'a'},
-        {"showrules", no_argument, 0, 's'},
+        {"add-rule", no_argument, 0, 'a'},
+        {"show-rules", no_argument, 0, 's'},
         {"remove-rule", required_argument, 0, 'x'},
         {"device-class", required_argument, 0, 'd'},
         {"device-subclass", required_argument, 0, 'e'},
@@ -154,6 +154,12 @@ void Database::parseArguments(int argc, char **argv)
             createRule = true;
             break;
         case 'x':
+            deleteRule = true;
+            if(string(optarg) == "all")
+            {
+                deleteAllRules = true;
+                break;
+            }
             checkIfNum(string(optarg));
             ruleIDs.push_back(string(optarg));
             break;
@@ -210,6 +216,10 @@ void Database::parseArguments(int argc, char **argv)
         case 't':
             defaultRules = true;
             break;
+        case '?':
+            if(optopt == 'x')
+            throw GeneralExc("Expecting number or string \"all\".");
+            break;
         default:
             if(!ruleIDs.empty())
             {
@@ -218,7 +228,14 @@ void Database::parseArguments(int argc, char **argv)
             }
             else
             {
-                throw GeneralExc("Unrecognized option or argument \"" + string(optarg) + "\"");
+                if(optarg == NULL)
+                {
+                    throw GeneralExc("Unrecognized parameter.");
+                }
+                else
+                {
+                    throw GeneralExc("Unrecognized argument \"" + string(optarg) + "\".");
+                }
             }
             break;
         }
@@ -483,7 +500,6 @@ void Database::insert()
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
     }
-    cout << "Rule successfully added\n";
 }
 
 /*
@@ -517,21 +533,34 @@ void Database::remove()
     int rc;
     char *errmsg = NULL;
     vector<string>::iterator ruleID;
-    for(ruleID = ruleIDs.begin(); ruleID < ruleIDs.end();ruleID++)
-    {
-        string SQLDeleteGroup = "DELETE FROM RULE WHERE group_id = (SELECT group_id from RULE WHERE ID = " + *ruleID + " AND is_group = 1);";
-        string SQLDelete =  "DELETE FROM RULE WHERE ID = " + *ruleID + ";";
+    string SQLDeleteAll = "DELETE FROM RULE;";
 
-        rc = sqlite3_exec(db, SQLDeleteGroup.c_str(), callback, NULL, &errmsg);
+    if(deleteAllRules)
+    {
+        rc = sqlite3_exec(db, SQLDeleteAll.c_str(), callback, NULL, &errmsg);
         if (rc)
         {
             throw DatabaseExc("Could not execute command", string(errmsg));
         }
-
-        rc = sqlite3_exec(db, SQLDelete.c_str(), callback, NULL, &errmsg);
-        if (rc)
+    }
+    else
+    {
+        for(ruleID = ruleIDs.begin(); ruleID < ruleIDs.end();ruleID++)
         {
-            throw DatabaseExc("Could not execute command", string(errmsg));
+            string SQLDeleteGroup = "DELETE FROM RULE WHERE group_id = (SELECT group_id from RULE WHERE ID = " + *ruleID + " AND is_group = 1);";
+            string SQLDelete =  "DELETE FROM RULE WHERE ID = " + *ruleID + ";";
+
+            rc = sqlite3_exec(db, SQLDeleteGroup.c_str(), callback, NULL, &errmsg);
+            if (rc)
+            {
+                throw DatabaseExc("Could not execute command", string(errmsg));
+            }
+
+            rc = sqlite3_exec(db, SQLDelete.c_str(), callback, NULL, &errmsg);
+            if (rc)
+            {
+                throw DatabaseExc("Could not execute command", string(errmsg));
+            }
         }
     }
 }
@@ -628,22 +657,8 @@ int Database::find_last_folder(const char *path)
 }
 
 /*
-* Check for all USB devices connected to the system, then add new rules based on their attributes.
+* Clear class variables, corresponding to device attributes, so new default rule can be added.
 */
-/*void Database::setDefaultRules()
-{
-    regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
-
-    for (const auto &item : fs::directory_iterator("/sys/bus/usb/devices/"))
-    {
-        if(fs::is_directory(item) & !(regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), interface)))
-        {
-            loadAttributes(item.path());
-            insert();
-        }
-    }
-}*/
-
 void Database::clearDeviceAttributes()
 {
     deviceClass.clear();
@@ -655,34 +670,37 @@ void Database::clearDeviceAttributes()
     newGroup = false;
 }
 
+/*
+* Clear class variables, corresponding to interface attributes, so new default rule can be added.
+*/
 void Database::clearInterfaceAttributes()
 {
     interfaceClass.clear();
     interfaceSubclass.clear();
 }
 
-void Database::setDefaultRules()
+/*
+* Check for all USB devices connected to the system, then add new rules and groups of rules based on their attributes.
+*/
+int Database::setDefaultRules()
 {
     regex device("\\d+-\\d+(\\.\\d)*");
     regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
     regex usbFolder("usb\\d+");
+    int rulesCounter = 0;
 
     for (const auto &item : fs::directory_iterator("/sys/bus/usb/devices/"))
     {
         if(fs::is_directory(item))
         {
-            if((regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), usbFolder)))
-            {
-                loadDeviceAttributes(item.path());
-                insert();
-                clearDeviceAttributes();
-            }
-            else if((regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), device)))
+            if(regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), device) ||
+                    regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), usbFolder))
             {
                 loadDeviceAttributes(item.path());
                 groupID = nextFreeGroupID;
                 newGroup = true;
                 insert();
+                rulesCounter++;
                 clearDeviceAttributes();
                 for (const auto &interfaceItem : fs::directory_iterator(item.path()))
                 {
@@ -690,6 +708,7 @@ void Database::setDefaultRules()
                     {
                         loadInterfaceAttributes(interfaceItem.path());
                         insert();
+                        rulesCounter++;
                         clearInterfaceAttributes();
                     }
                 }
@@ -698,6 +717,7 @@ void Database::setDefaultRules()
             }
         }
     }
+    return rulesCounter;
 }
 
 /*
@@ -712,6 +732,10 @@ void Database::attributesCheck()
     }
 }
 
+/*
+* Find and save the next free ID for groups, so new groups, created as default rules won't affect
+* existing groups of rules.
+*/
 int Database::findGroupID(void *data, int argc, char **argv, char **column)
 {
     if(*argv == NULL)
@@ -726,6 +750,9 @@ int Database::findGroupID(void *data, int argc, char **argv, char **column)
     return 0;
 }
 
+/*
+* Initialization of application before any rule can be added. 
+*/
 void Database::init()
 {
     int rc;
@@ -746,7 +773,7 @@ int main(int argc, char **argv)
         Database *database = Database::getDatabase();
 
         database->parseArguments(argc, argv);
-        if (!(database->createRule | database->showRules | !database->ruleIDs.empty() | database->defaultRules))
+        if (!(database->createRule | database->showRules | !database->ruleIDs.empty() | database->defaultRules | database->deleteAllRules))
         {
             throw BadParamExc("", "No action specified");
         }
@@ -762,6 +789,7 @@ int main(int argc, char **argv)
         if(database->createRule)
         {
             database->insert();
+            cout << "Rule successfully added.\n";
         }
 
         if(database->showRules)
@@ -769,14 +797,14 @@ int main(int argc, char **argv)
             database->show();
         }
 
-        if(!database->ruleIDs.empty())
+        if(database->deleteRule)
         {
             database->remove();
         }
 
         if(database->defaultRules)
         {
-            database->setDefaultRules();
+            cout << database->setDefaultRules() << " rule(s) successfully created.\n";
         }
     }
     catch(exception& e)

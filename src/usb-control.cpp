@@ -468,7 +468,7 @@ void Control::check_device(Device device)
     else
     {
         device.disconnect();
-        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID\n";
+        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID and class: " + device.deviceClass + ", subclass: " + device.deviceSubclass + "\n";
         cout << "with interface(s):\n";
         for( interface = device.interfaces.begin(); interface < device.interfaces.end(); interface++)
         {

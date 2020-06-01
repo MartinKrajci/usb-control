@@ -63,8 +63,10 @@ class Database
     public:
         bool createRule = false;
         bool showRules = false;
+        bool deleteRule = false;
         bool newGroup = false;
         bool defaultRules = false;
+        bool deleteAllRules = false;
         vector<string> ruleIDs;
 
         static Database *getDatabase();
@@ -75,7 +77,7 @@ class Database
         void insert();
         void show();
         void remove();
-        void setDefaultRules();
+        int setDefaultRules();
         void init();
 
 };
