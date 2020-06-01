@@ -10,11 +10,11 @@ or (depends on your linux distro)
 Also GCC of version 8 or higher is required.  
 
 ## Instalation
-Run `make` command in project directory.  
+Run `make` command in project root directory.  
 
 ## Running the tool
 ### Make database of rules
-To run USBControl tool, database of rules is needed.  
+To run USBControl tool, database of rules is needed. Every command below needs to be entered in project root directory.  
 
 #### Create default rules
 ```
@@ -27,7 +27,7 @@ Rules created with this option are based on devices, already connected in the sy
 ```
 ./bin/rules -a {-d <ARG>} {-e <ARG>} {-v <ARG>} {-p <ARG>} {-i <ARG>} {-u <ARG>} {-c <ARG>} {-o <ARG>} {-g <ARG>} {-n}
 ```
-long option: --addrule  
+long option: --add-rule  
 When adding new rule, one or more parameters can be used.  
 Note: Application needs to be restarted before any newly added rules can be used.  
 
@@ -62,8 +62,8 @@ description: Total number of interfaces that connected device can have.
 
 ##### -o
 long option: --port  
-description: Number of port on your personal computer.  
-tip: You can find what numbers your ports have by inserting known and trusted device into your computer and typing `lsusb -t`. Find your device in listing you got from command and you will see corresponding port number.  
+description: Number of port on your personal computer. Also can be used for defining port in USB hub. In that case, related ports needs to be separated by dots. For example, when USB hub is connected in port 3, device on port 1 of USB hub would be connected in port "3.1". It's also possible to define that device can be anywhere in the USB hub, by not writing the last number of port, for example "3.".  
+tip: You can find what numbers your ports have by inserting known and trusted device into your computer or USB hub and typing `lsusb -t`. Find your device in listing you got from command and you will see corresponding port number.  
 
 
 ##### -n
@@ -75,7 +75,7 @@ long option: --group-id
 description: Sets ID for new group or place new rule in existing group with ID specified in argument.  
 
 ##### Class and subclass
-It's number defining function of device. Following table shows all possible classes and if they can be used in device, interface or both.
+Class is number defining function of device. Following table shows all possible classes and if they can be used in device, interface or both.  
 
 | Class number | Name                            | Device | Interface |
 |:------------:|---------------------------------|:------:|:---------:|
@@ -103,20 +103,23 @@ It's number defining function of device. Following table shows all possible clas
 |      FF      | Vendor specific                 |   yes  |    yes    |
 
 You can learn more about classes *[here](https://www.usb.org/defined-class-codes).*  
+Subclass is defining the function more closely. In most cases, the list of existing subclasses is unavailable, but often it defines standard which device uses, or other implementation details. However, class and subclass in both device or interface can be obtained by `lsusb -v | grep -E 'Bus|bDeviceClass|bDeviceSubClass|bInterfaceClass|bInterfaceSubClass'
+`.  
 
 #### Show all rules
 ```
 ./bin/rules -s
 ```
-long option: --showrules  
+long option: --show-rules  
 Running **rules** with ` -s` parameter will print every rule saved by user.  
+Tip: When output seems to be broken, try to expand terminals width.  
 
 #### Remove rule
 ```
 ./bin/rules -x <ARG>
 ```
 long option: --remove-rule  
-You can remove any rule by typing ` -x` parameter and using ID of rule you want to remove as argument.  
+You can remove any rule by typing ` -x` parameter and using ID of rule you want to remove as argument. Using more IDs in the same time is supported. Also it's possible to write string "all" as an argument, to delete all rules in database.  
 
 #### Examples
 ```
@@ -135,7 +138,7 @@ USB mouse or keyboard can be used on port 1.
 Group of rules with ID 6 is created. Device has to have function described in interface (because -d 00) and can have one or two interfaces - HID, Wireless controller or both. Every another interface will cause that device won't be authorized.  
 
 ### Run tool itself
-Run tool with
+Run tool in project root directory with  
 ```
 make run
 ```
