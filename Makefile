@@ -1,15 +1,26 @@
-all: control rules
+CXX = g++
+CXXFLAGS = -std=c++17
+LIBS = -l sqlite3 -lstdc++fs
 
-control:
-	g++ -std=c++17 -c src/usb-control.cpp -o build/usb-control.o
-	g++ -std=c++17 -c src/main.cpp -o build/main.o
-	g++ -std=c++17 -c src/exceptions.cpp -o build/exceptions.o
-	g++ build/usb-control.o build/main.o build/exceptions.o -o bin/usb-control -l sqlite3 -lstdc++fs
+all: ./bin/usb-control ./bin/rules
 
-rules:
-	g++ -std=c++17 -c src/rules.cpp -o build/rules.o
-	g++ -std=c++17 -c src/exceptions.cpp -o build/exceptions.o
-	g++ build/rules.o build/exceptions.o -o bin/rules -l sqlite3 -lstdc++fs
+./bin/usb-control: ./build/usb-control.o ./build/main.o ./build/exceptions.o
+	$(CXX) build/usb-control.o build/main.o build/exceptions.o -o bin/usb-control $(LIBS)
+
+./build/usb-control.o: ./src/usb-control.cpp
+	$(CXX) $(CXXFLAGS) -c src/usb-control.cpp -o build/usb-control.o
+
+./build/main.o: ./src/main.cpp
+	$(CXX) $(CXXFLAGS) -c src/main.cpp -o build/main.o
+
+./bin/rules: ./build/rules.o ./build/exceptions.o
+	$(CXX) build/rules.o build/exceptions.o -o bin/rules $(LIBS)
+
+./build/rules.o: ./src/rules.cpp
+	$(CXX) $(CXXFLAGS) -c src/rules.cpp -o build/rules.o
+
+./build/exceptions.o: ./src/exceptions.cpp
+	$(CXX) $(CXXFLAGS) -c src/exceptions.cpp -o build/exceptions.o
 
 clean:
 	rm build/* database/* bin/*

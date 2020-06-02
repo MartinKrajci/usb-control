@@ -1,7 +1,14 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        25.4.2020
+* Last date of modification:        2.6.2020
+* Description of file:
+*
+* This file consists of the implementation of the program, which detects newly connected USB devices
+* and inspects their attributes, trying to match them against the user defined rules. In case of a
+* match, all interfaces under inspected device are authorized and loading of their driver is
+* triggered.
+*
 */
 
 #include "usb-control.h"

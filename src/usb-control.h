@@ -1,7 +1,11 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        25.4.2020
+* Last date of modification:        2.6.2020
+* Description of file:
+*
+* This file is header file for usb-control.cpp
+*
 */
 
 #ifndef USB_CONTROL

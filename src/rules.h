@@ -1,7 +1,11 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        12.5.2020
+* Last date of modification:        2.6.2020
+* Description of file:
+*
+* This file is header file for rules.cpp
+*
 */
 
 #ifndef RULES

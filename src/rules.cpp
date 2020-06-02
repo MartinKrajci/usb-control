@@ -1,12 +1,16 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        12.5.2020
+* Last date of modification:        2.6.2020
+* Description of file:
+*
+* This file consists of the implementation of the program, which creates interface for defining rules.
+* Rules can be created, displayed or removed. Also support for default rules creation is
+* implemented.
+*
 */
 
 #include "rules.h"
-
-#define FAILED 1
 
 using namespace std;
 
