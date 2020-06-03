@@ -4,14 +4,14 @@
 * Last date of modification:        2.6.2020
 * Description of file:
 *
-* This file consists of the implementation of the exceptions.
+* This file consists of the exceptions implementation.
 *
 */
 
 #include "exceptions.h"
 
 /*
-* Exception constructor. Thrown when any socket error occured.
+* Exception constructor. Thrown, when any socket error occured.
 */
 SocketExc::SocketExc(string errMsg)
 {
@@ -27,7 +27,7 @@ const char * SocketExc::what() const noexcept
 }
 
 /*
-* Exception constructor. Thrown when user entered bad argument for parameter.
+* Exception constructor. Thrown, when user entered bad argument for parameter.
 */
 BadArgExc::BadArgExc(string type, string errMsg)
 {
@@ -44,7 +44,7 @@ const char * BadArgExc::what() const noexcept
 }
 
 /*
-* Exception constructor. Thrown when user entered bad parameter.
+* Exception constructor. Thrown, when user entered bad parameter.
 */
 BadParamExc::BadParamExc(string type, string errMsg)
 {
@@ -61,7 +61,7 @@ const char * BadParamExc::what() const noexcept
 }
 
 /*
-* Exception constructor. Thrown when function from .
+* Exception constructor. Thrown, when function from sqlite3 fails.
 */
 DatabaseExc::DatabaseExc(string type, string originalError)
 {
@@ -78,7 +78,7 @@ const char * DatabaseExc::what() const noexcept
 }
 
 /*
-* Exception constructor. Thrown when user do not have root privileges.
+* Exception constructor. Thrown, when user do not have root privileges.
 */
 BadPrivilegesExc::BadPrivilegesExc(string errMsg)
 {
@@ -94,7 +94,7 @@ const char * BadPrivilegesExc::what() const noexcept
 }
 
 /*
-* Exception constructor. Thrown when exception not belonging into any classes above occured.
+* Exception constructor. Thrown, when exception not belonging into any classes above occured.
 */
 GeneralExc::GeneralExc(string errMsg)
 {

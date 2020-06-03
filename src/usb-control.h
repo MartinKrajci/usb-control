@@ -1,7 +1,7 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        2.6.2020
+* Last date of modification:        3.6.2020
 * Description of file:
 *
 * This file is header file for usb-control.cpp
@@ -88,7 +88,7 @@ class Interface
         string interfaceClass;
         string interfaceSubclass;
 
-        void loadAttributes();
+        void load_attributes();
 };
 
 class Device
@@ -107,7 +107,7 @@ class Device
         int interfacesFound = 0;
         vector<Interface> interfaces;
 
-        void loadAttributes();
+        void load_attributes();
         void disconnect();
         void authorize();
 
@@ -118,12 +118,14 @@ class Control
         static Control *control;
         vector<Rule *> rules;
         vector<RulesGroup *> groups;
-        bool GroupFoundFlag = false;
+        bool groupFoundFlag = false;
+        bool indivRuleFoundFlag = false;
 
         static void save_rules(char **argv);
         static int callback(void *data, int argc, char **argv, char **column);
-        static int checkIfNoRulesCallback(void *data, int argc, char **argv, char **column);
-        static int checkIfNoGroupsCallback(void *data, int argc, char **argv, char **column);
+        static int check_if_no_rules_callback(void *data, int argc, char **argv, char **column);
+        static int check_if_no_groups_callback(void *data, int argc, char **argv, char **column);
+        static int check_if_no_indiv_rules_callback(void *data, int argc, char **argv, char **column);
         static int parse_groups(void *data, int argc, char **argv, char **column);
         static void save_groups(char **argv);
         static void save_interface_rule(char **argv);
@@ -135,7 +137,7 @@ class Control
 
         void read_rules();
         void check_device(Device device);
-        static Control *getControl();
+        static Control *get_control();
 };
 
 class Netlink

@@ -1,11 +1,11 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        2.6.2020
+* Last date of modification:        3.6.2020
 * Description of file:
 *
-* This file consists of the implementation of the program, which detects newly connected USB devices
-* and inspects their attributes, trying to match them against the user defined rules. In case of a
+* This file consists of the program implementation, which detects newly connected USB devices
+* and inspects their attributes, trying to match them with rules defined by user. In case of a
 * match, all interfaces under inspected device are authorized and loading of their driver is
 * triggered.
 *
@@ -27,7 +27,7 @@ Control *Control::control;
 /*
 * Loads all attributes related with interface from files in given path.
 */
-void Interface::loadAttributes()
+void Interface::load_attributes()
 {
     ifstream fInterfaceClass;
     ifstream fInterfaceSubclass;
@@ -40,7 +40,7 @@ void Interface::loadAttributes()
 /*
 * Loads all attributes related with device from files in given path.
 */
-void Device::loadAttributes()
+void Device::load_attributes()
 {
     ifstream fDeviceClass;
     ifstream fDeviceSubclass;
@@ -116,7 +116,7 @@ void Device::authorize()
 void Control::save_rules(char **argv)
 {
     int i = 0;
-    static Control *con = Control::getControl();
+    static Control *con = Control::get_control();
     Rule *rule = new Rule;
 
     rule->ID = (argv[0] ? argv[0] : "NULL");
@@ -129,7 +129,6 @@ void Control::save_rules(char **argv)
     rule->interfacesTotal = (argv[7] ? stoi(argv[7]) : 999);
     rule->port = (argv[8] ? argv[8] : "NULL");
     con->rules.push_back(rule);
-
 }
 
 /*
@@ -145,7 +144,7 @@ int Control::callback(void *data, int argc, char **argv, char **column)
 * Callback checking if there are no rules in database. If so, exception is thrown because application
 * cannot continue without rules.
 */
-int Control::checkIfNoRulesCallback(void *data, int argc, char **argv, char **column)
+int Control::check_if_no_rules_callback(void *data, int argc, char **argv, char **column)
 {
     if(**argv == '0')
     {
@@ -157,13 +156,27 @@ int Control::checkIfNoRulesCallback(void *data, int argc, char **argv, char **co
 /*
 * Callback which sets flag if any rules group was found, so we can read them later. 
 */
-int Control::checkIfNoGroupsCallback(void *data, int argc, char **argv, char **column)
+int Control::check_if_no_groups_callback(void *data, int argc, char **argv, char **column)
 {
-    Control *con = Control::getControl();
+    Control *con = Control::get_control();
 
     if(**argv != '0')
     {
-        con->GroupFoundFlag = true;
+        con->groupFoundFlag = true;
+    }
+    return 0;
+}
+
+/*
+* Callback which sets flag if any rules group was found, so we can read them later. 
+*/
+int Control::check_if_no_indiv_rules_callback(void *data, int argc, char **argv, char **column)
+{
+    Control *con = Control::get_control();
+
+    if(**argv != '0')
+    {
+        con->indivRuleFoundFlag = true;
     }
     return 0;
 }
@@ -174,7 +187,7 @@ int Control::checkIfNoGroupsCallback(void *data, int argc, char **argv, char **c
 void Control::save_groups(char **argv)
 {
     int i = 0;
-    static Control *con = Control::getControl();
+    static Control *con = Control::get_control();
     RulesGroup *group = new RulesGroup;
 
     group->deviceClass = (argv[1] ? argv[1] : "NULL");
@@ -193,7 +206,7 @@ void Control::save_groups(char **argv)
 void Control::save_interface_rule(char **argv)
 {
     InterfaceRule *rule = new InterfaceRule;
-    Control *con = Control::getControl();
+    Control *con = Control::get_control();
     vector<RulesGroup *>::iterator group;
     rule->interfaceClass = (argv[5] ? argv[5] : "NULL");
     rule->interfaceSubclass = (argv[6] ? argv[6] : "NULL");
@@ -234,6 +247,7 @@ void Control::read_rules()
     string SQLCheckIfTableExists = "SELECT COUNT(type) FROM sqlite_master WHERE TYPE='table' AND NAME='RULE'";
     string SQLCeckIfRulesExists =  "SELECT COUNT() FROM RULE";
     string SQLCheckIfGroupsExist = "SELECT COUNT() FROM RULE WHERE GROUP_ID IS NOT NULL";
+    string SQLCheckIfIndivRulesExist = "SELECT COUNT() FROM RULE WHERE GROUP_ID IS NULL";
     string SQLSelectGroups = "SELECT * FROM RULE WHERE GROUP_ID IS NOT NULL";
     char *errmsg = NULL;
 
@@ -244,13 +258,13 @@ void Control::read_rules()
         throw GeneralExc("Could not open database. Does it exist?");
     }
 
-    rc = sqlite3_exec(db, SQLCheckIfTableExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheckIfTableExists.c_str(), check_if_no_rules_callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
-    rc = sqlite3_exec(db, SQLCeckIfRulesExists.c_str(), checkIfNoRulesCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCeckIfRulesExists.c_str(), check_if_no_rules_callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
@@ -262,13 +276,19 @@ void Control::read_rules()
         throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
-    rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), checkIfNoGroupsCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheckIfGroupsExist.c_str(), check_if_no_groups_callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
     }
 
-    if (GroupFoundFlag)
+    rc = sqlite3_exec(db, SQLCheckIfIndivRulesExist.c_str(), check_if_no_indiv_rules_callback, NULL, &errmsg);
+    if (rc)
+    {
+        throw DatabaseExc("Could not execute command", string(errmsg));
+    }
+
+    if (groupFoundFlag)
     {
         rc = sqlite3_exec(db, SQLSelectGroups.c_str(), parse_groups, NULL, &errmsg);
         if (rc)
@@ -445,8 +465,11 @@ void Control::check_device(Device device)
     string ruleID;
     string groupID;
 
-    authorized = authorized | check_for_rule(device, &ruleID);
-    if(GroupFoundFlag && !authorized)
+    if(indivRuleFoundFlag)
+    {
+        authorized = authorized | check_for_rule(device, &ruleID);
+    }
+    if(groupFoundFlag && !authorized)
     {
         authorized = authorized | check_for_group(device, &groupID);
         clean_groups();
@@ -475,7 +498,7 @@ void Control::check_device(Device device)
     else
     {
         device.disconnect();
-        cout << "Disconnecting potenctialy dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID and class: " + device.deviceClass + ", subclass: " + device.deviceSubclass + "\n";
+        cout << "Disconnecting potentially dangerous device with " + device.vendor + ":" + device.product + " vendor:product ID and class: " + device.deviceClass + ", subclass: " + device.deviceSubclass + "\n";
         cout << "with interface(s):\n";
         for( interface = device.interfaces.begin(); interface < device.interfaces.end(); interface++)
         {
@@ -489,7 +512,7 @@ void Control::check_device(Device device)
 /*
 * Method to get pointer for the only one object of Control class, because singleton is used.
 */
-Control *Control::getControl()
+Control *Control::get_control()
 {
     if(control == 0)
     {
@@ -565,7 +588,7 @@ void Netlink::save_device(char *buffer)
     numInterfacesFile.open(device.path + "/bNumInterfaces");
     getline(numInterfacesFile, numInterfaces);
     device.interfacesTotal = stoi(numInterfaces);
-    device.loadAttributes();
+    device.load_attributes();
     devices.push_back(device);
 }
 
@@ -584,13 +607,13 @@ void Netlink::save_interface(char *buffer)
         {
 
             interface.path = "/sys" + string(buffer + 4);
-            interface.loadAttributes();
+            interface.load_attributes();
             (*device).interfaces.push_back(interface);
             (*device).interfacesFound++;
 
             if((*device).interfacesFound == (*device).interfacesTotal)
             {
-                con = Control::getControl();
+                con = Control::get_control();
                 con->check_device(*device);
                 devices.erase(device);
             }

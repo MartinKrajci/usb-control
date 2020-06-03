@@ -1,10 +1,10 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        2.6.2020
+* Last date of modification:        3.6.2020
 * Description of file:
 *
-* This file consists of the implementation of the program, which creates interface for defining rules.
+* This file consists of the program implementation, which creates interface for defining rules.
 * Rules can be created, displayed or removed. Also support for default rules creation is
 * implemented.
 *
@@ -70,9 +70,9 @@ Database *Database::getDatabase()
 }
 
 /*
-* Check if given string is of correct format (two hexadecimal numbers)
+* Check if given string is of correct format (two hexadecimal numbers).
 */
-void Database::checkIfTwoHex(string arg)
+void Database::check_if_two_hex(string arg)
 {
     regex twoHex("[0-9a-fA-F]{2}");
 
@@ -83,9 +83,9 @@ void Database::checkIfTwoHex(string arg)
 }
 
 /*
-* Check if given string is of correct format (four hexadecimal numbers)
+* Check if given string is of correct format (four hexadecimal numbers).
 */
-void Database::checkIfFourHex(string arg)
+void Database::check_if_four_hex(string arg)
 {
     regex fourHex("[0-9a-fA-F]{4}");
 
@@ -96,9 +96,9 @@ void Database::checkIfFourHex(string arg)
 }
 
 /*
-* Check if given string is of correct format (decimal number)
+* Check if given string is of correct format (decimal number).
 */
-void Database::checkIfNum(string arg)
+void Database::check_if_num(string arg)
 {
     regex num("\\d+");
 
@@ -109,9 +109,9 @@ void Database::checkIfNum(string arg)
 }
 
 /*
-* Check if given string is of correct format (number or numbers, separated by dot)
+* Check if given string is of correct format (number or numbers, separated by dot).
 */
-void Database::checkIfPort(string arg)
+void Database::check_if_port(string arg)
 {
     regex port("\\d+(\\.\\d+)*(\\.){0,1}");
 
@@ -122,10 +122,25 @@ void Database::checkIfPort(string arg)
 }
 
 /*
-* Method for parsing command line parameters. Arguments of parameters are checked and stored in
-* class variables
+* Convert upper-case hex numbers to lower-case.
 */
-void Database::parseArguments(int argc, char **argv)
+void Database::hex_to_lower(char* chars)
+{
+    for(int i = 0; chars[i] != 0; i++)
+    {
+        if (chars[i] >= 'A' && chars[i] <= 'Z')
+        {
+            chars[i] = chars[i] - ('A' - 'a');
+        }
+    }
+
+}
+
+/*
+* Method for parsing command line parameters. Arguments of parameters are checked and stored in
+* class variables.
+*/
+void Database::parse_arguments(int argc, char **argv)
 {
     int opt = 0;
     int opt_index = 0;
@@ -164,54 +179,60 @@ void Database::parseArguments(int argc, char **argv)
                 deleteAllRules = true;
                 break;
             }
-            checkIfNum(string(optarg));
+            check_if_num(string(optarg));
             ruleIDs.push_back(string(optarg));
             break;
         case 's':
             showRules = true;
             break;
         case 'd':
-            checkIfTwoHex(string(optarg));
+            check_if_two_hex(string(optarg));
+            hex_to_lower(optarg);
             deviceClass = string(optarg);
             hasAttribute = true;
             break;
         case 'e':
-            checkIfTwoHex(string(optarg));
+            check_if_two_hex(string(optarg));
+            hex_to_lower(optarg);
             deviceSubclass = string(optarg);
             hasAttribute = true;
             break;
         case 'i':
-            checkIfTwoHex(string(optarg));
+            check_if_two_hex(string(optarg));
+            hex_to_lower(optarg);
             interfaceClass = string(optarg);
             hasAttribute = true;
             break;
         case 'u':
-            checkIfTwoHex(string(optarg));
+            check_if_two_hex(string(optarg));
+            hex_to_lower(optarg);
             interfaceSubclass = string(optarg);
             hasAttribute = true;
             break;
         case 'v':
-            checkIfFourHex(string(optarg));
+            check_if_four_hex(string(optarg));
+            hex_to_lower(optarg);
             vendor = string(optarg);
             hasAttribute = true;
             break;
         case 'p':
-            checkIfFourHex(string(optarg));
+            check_if_four_hex(string(optarg));
+            hex_to_lower(optarg);
             product = string(optarg);
             hasAttribute = true;
             break;
         case 'c':
-            checkIfNum(string(optarg));
+            check_if_num(string(optarg));
             interfacesTotal = string(optarg);
             hasAttribute = true;
             break;
         case 'o':
-            checkIfPort(string(optarg));
+            check_if_port(string(optarg));
             port = string(optarg);
             hasAttribute = true;
             break;
         case 'g':
-            checkIfNum(string(optarg));
+            check_if_num(string(optarg));
             groupID = string(optarg);
             break;
         case 'n':
@@ -227,7 +248,7 @@ void Database::parseArguments(int argc, char **argv)
         default:
             if(!ruleIDs.empty())
             {
-                checkIfNum(string(optarg));
+                check_if_num(string(optarg));
                 ruleIDs.push_back(string(optarg));
             }
             else
@@ -288,7 +309,7 @@ int Database::callback(void *data, int argc, char **argv, char **column)
 /*
 * Callback for SQL command which check if given group exists.
 */
-int Database::checkIfGroupExistsCallback(void *data, int argc, char **argv, char **column)
+int Database::check_if_group_exists_callback(void *data, int argc, char **argv, char **column)
 {
     if(**argv == '0')
     {
@@ -308,7 +329,7 @@ void Database::checkIfGroupExists()
 
     SQLCheck = "SELECT COUNT() FROM RULE WHERE GROUP_ID='" + groupID + "'";
 
-    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupExistsCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheck.c_str(), check_if_group_exists_callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
@@ -335,6 +356,12 @@ void Database::insert()
     if (!(createRule & hasAttribute) & !defaultRules)
     {
         throw BadParamExc("-a", "Missing arguments for rule creation.");
+    }
+
+    if(newGroup)
+    {
+        check_if_group_not_exists();
+        attributes_check();
     }
 
     if (!groupID.empty() & !newGroup)
@@ -572,7 +599,7 @@ void Database::remove()
 /*
 * Callback for SQL command which check if given group dosn't exist.
 */
-int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **column)
+int Database::check_if_group_not_exists_callback(void *data, int argc, char **argv, char **column)
 {
     if(**argv != '0')
     {
@@ -584,7 +611,7 @@ int Database::checkIfGroupNotExistsCallback(void *data, int argc, char **argv, c
 /*
 * Check if group ID was given and execute SQL command which check if given group dosn't exist.
 */
-void Database::checkIfGroupNotExists()
+void Database::check_if_group_not_exists()
 {
     int rc;
     char *errmsg = NULL;
@@ -597,7 +624,7 @@ void Database::checkIfGroupNotExists()
 
     SQLCheck = "SELECT COUNT() FROM RULE WHERE GROUP_ID='" + groupID + "'";
 
-    rc = sqlite3_exec(db, SQLCheck.c_str(), checkIfGroupNotExistsCallback, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLCheck.c_str(), check_if_group_not_exists_callback, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
@@ -607,7 +634,7 @@ void Database::checkIfGroupNotExists()
 /*
 * Load attributes of interface on given path.
 */
-void Database::loadInterfaceAttributes(string path)
+void Database::load_interface_attributes(string path)
 {
     ifstream fInterfaceClass;
     ifstream fInterfaceSubclass;
@@ -622,7 +649,7 @@ void Database::loadInterfaceAttributes(string path)
 /*
 * Load attributes of device on given path.
 */
-void Database::loadDeviceAttributes(string path)
+void Database::load_device_attributes(string path)
 {
     ifstream fDeviceClass;
     ifstream fDeviceSubclass;
@@ -663,7 +690,7 @@ int Database::find_last_folder(const char *path)
 /*
 * Clear class variables, corresponding to device attributes, so new default rule can be added.
 */
-void Database::clearDeviceAttributes()
+void Database::clear_device_attributes()
 {
     deviceClass.clear();
     deviceSubclass.clear();
@@ -677,7 +704,7 @@ void Database::clearDeviceAttributes()
 /*
 * Clear class variables, corresponding to interface attributes, so new default rule can be added.
 */
-void Database::clearInterfaceAttributes()
+void Database::clear_interface_attributes()
 {
     interfaceClass.clear();
     interfaceSubclass.clear();
@@ -686,7 +713,7 @@ void Database::clearInterfaceAttributes()
 /*
 * Check for all USB devices connected to the system, then add new rules and groups of rules based on their attributes.
 */
-int Database::setDefaultRules()
+int Database::set_default_rules()
 {
     regex device("\\d+-\\d+(\\.\\d)*");
     regex interface("\\d+-\\d+(\\.\\d)*:\\d+\\.\\d+");
@@ -700,20 +727,20 @@ int Database::setDefaultRules()
             if(regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), device) ||
                     regex_match(string(item.path().c_str() + find_last_folder(item.path().c_str())), usbFolder))
             {
-                loadDeviceAttributes(item.path());
+                load_device_attributes(item.path());
                 groupID = nextFreeGroupID;
                 newGroup = true;
                 insert();
                 rulesCounter++;
-                clearDeviceAttributes();
+                clear_device_attributes();
                 for (const auto &interfaceItem : fs::directory_iterator(item.path()))
                 {
                     if((regex_match(string(interfaceItem.path().c_str() + find_last_folder(interfaceItem.path().c_str())), interface)))
                     {
-                        loadInterfaceAttributes(interfaceItem.path());
+                        load_interface_attributes(interfaceItem.path());
                         insert();
                         rulesCounter++;
-                        clearInterfaceAttributes();
+                        clear_interface_attributes();
                     }
                 }
                 nextFreeGroupID = to_string((stoi(nextFreeGroupID)) + 1);
@@ -728,7 +755,7 @@ int Database::setDefaultRules()
 * Check if there are any interface attributes when creating new rule group, because only device
 * attributes are allowed in this case.
 */
-void Database::attributesCheck()
+void Database::attributes_check()
 {
     if (!(interfaceSubclass.empty() & interfaceClass.empty()))
     {
@@ -740,7 +767,7 @@ void Database::attributesCheck()
 * Find and save the next free ID for groups, so new groups, created as default rules won't affect
 * existing groups of rules.
 */
-int Database::findGroupID(void *data, int argc, char **argv, char **column)
+int Database::find_group_ID(void *data, int argc, char **argv, char **column)
 {
     if(*argv == NULL)
     {
@@ -760,10 +787,10 @@ int Database::findGroupID(void *data, int argc, char **argv, char **column)
 void Database::init()
 {
     int rc;
-    string SQLfindGroupID = "SELECT MAX(GROUP_ID) FROM RULE;";
+    string SQLfind_group_ID = "SELECT MAX(GROUP_ID) FROM RULE;";
     char *errmsg = NULL;
 
-    rc = sqlite3_exec(db, SQLfindGroupID.c_str(), findGroupID, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLfind_group_ID.c_str(), find_group_ID, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
@@ -776,7 +803,7 @@ int main(int argc, char **argv)
     {
         Database *database = Database::getDatabase();
 
-        database->parseArguments(argc, argv);
+        database->parse_arguments(argc, argv);
         if (!(database->createRule | database->showRules | !database->ruleIDs.empty() | database->defaultRules | database->deleteAllRules))
         {
             throw BadParamExc("", "No action specified");
@@ -786,8 +813,8 @@ int main(int argc, char **argv)
 
         if(database->newGroup)
         {
-            database->checkIfGroupNotExists();
-            database->attributesCheck();
+            database->check_if_group_not_exists();
+            database->attributes_check();
         }
 
         if(database->createRule)
@@ -808,7 +835,7 @@ int main(int argc, char **argv)
 
         if(database->defaultRules)
         {
-            cout << database->setDefaultRules() << " rule(s) successfully created.\n";
+            cout << database->set_default_rules() << " rule(s) successfully created.\n";
         }
     }
     catch(exception& e)

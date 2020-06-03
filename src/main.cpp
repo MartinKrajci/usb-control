@@ -1,7 +1,7 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        2.6.2020
+* Last date of modification:        3.6.2020
 * Description of file:
 *
 * Main function of the application for controlling newly connected devices.
@@ -12,7 +12,7 @@
 
 int main()
 {
-    Control *con = Control::getControl();
+    Control *con = Control::get_control();
     
     signal(SIGABRT, (__sighandler_t ) at_exit);
     signal(SIGINT, (__sighandler_t ) at_exit);

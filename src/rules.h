@@ -1,7 +1,7 @@
 /*
 * Project name:                     USB Control
 * Author:                           Martin Krajči
-* Last date of modification:        2.6.2020
+* Last date of modification:        3.6.2020
 * Description of file:
 *
 * This file is header file for rules.cpp
@@ -51,18 +51,19 @@ class Database
 
     Database();
     static int callback(void *data, int argc, char **argv, char **column);
-    static int checkIfGroupExistsCallback(void *data, int argc, char **argv, char **column);
-    static int checkIfGroupNotExistsCallback(void *data, int argc, char **argv, char **column);
-    static int findGroupID(void *data, int argc, char **argv, char **column);
-    void checkIfTwoHex(string arg);
-    void checkIfFourHex(string arg);
-    void checkIfNum(string arg);
-    void checkIfPort(string arg);
-    void loadInterfaceAttributes(string path);
-    void loadDeviceAttributes(string path);
-    void clearDeviceAttributes();
-    void clearInterfaceAttributes();
+    static int check_if_group_exists_callback(void *data, int argc, char **argv, char **column);
+    static int check_if_group_not_exists_callback(void *data, int argc, char **argv, char **column);
+    static int find_group_ID(void *data, int argc, char **argv, char **column);
+    void check_if_two_hex(string arg);
+    void check_if_four_hex(string arg);
+    void check_if_num(string arg);
+    void check_if_port(string arg);
+    void load_interface_attributes(string path);
+    void load_device_attributes(string path);
+    void clear_device_attributes();
+    void clear_interface_attributes();
     int find_last_folder(const char *path);
+    void hex_to_lower(char* chars);
 
     public:
         bool createRule = false;
@@ -75,13 +76,13 @@ class Database
 
         static Database *getDatabase();
         void checkIfGroupExists();
-        void checkIfGroupNotExists();
-        void attributesCheck();
-        void parseArguments(int argc, char **argv);
+        void check_if_group_not_exists();
+        void attributes_check();
+        void parse_arguments(int argc, char **argv);
         void insert();
         void show();
         void remove();
-        int setDefaultRules();
+        int set_default_rules();
         void init();
 
 };
