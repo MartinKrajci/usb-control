@@ -1,5 +1,5 @@
 # USBControl
-USBControl, Linux command-line tool, is able to block potentionaly harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device needs to be whitelisted. There are two types of rules which can be used in the creation of whitelist - individual rules and groups of rules. The difference is how application deals with interfaces. When using individual rules, interface attributes needs to match only with one interface. When comparing newly connected device to group of rules, every interface of device needs to find a match with interface rule in group of rules, while every interface rule can be used only once. Groups of rules represent more accurate way to describe devices.  
+USBControl, Linux command-line tool, is able to block potentionally harmfull USB devices. Blocking is based on database of rules, made by user. Every allowed device needs to be whitelisted. There are two types of rules, which can be used in the creation of whitelist - individual rules and groups of rules. The difference is how application deals with interfaces. When using individual rules, interface attributes need to match only with one interface. When comparing newly connected device to group of rules, every device interface needs to find a match with interface rule in group of rules, while every interface rule can be used only once. Groups of rules represent more accurate way to describe devices.  
 
 ## Prerequisites
 You need to install sqlite3 library to make database working.  
@@ -21,7 +21,7 @@ To run USBControl tool, database of rules is needed. Every command below needs t
 ./bin/rules -t
 ```
 long option: --set-default-rules  
-Rules created with this option are based on devices, already connected in the system.  
+Rules created with this option are based on devices already connected in the system.  
 
 #### Save new rule
 ```
@@ -62,7 +62,7 @@ description: Total number of interfaces that connected device can have.
 
 ##### -o
 long option: --port  
-description: Number of port on your personal computer. Also can be used for defining port in USB hub. In that case, related ports needs to be separated by dots. For example, when USB hub is connected in port 3, device on port 1 of USB hub would be connected in port "3.1". It's also possible to define that device can be anywhere in the USB hub, by not writing the last number of port, for example "3.".  
+description: Port number on your personal computer. Also can be used for defining port in USB hub. In that case, related ports needs to be separated by dots. For example, when USB hub is connected in port 3, device on port 1 of USB hub would be connected in port "3.1". It's also possible to define, that device can be anywhere in the USB hub, by not writing the last number of port, for example "3.".  
 tip: You can find what numbers your ports have by inserting known and trusted device into your computer or USB hub and typing `lsusb -t`. Find your device in listing you got from command and you will see corresponding port number.  
 
 
@@ -103,7 +103,7 @@ Class is number defining function of device. Following table shows all possible 
 |      FF      | Vendor specific                 |   yes  |    yes    |
 
 You can learn more about classes *[here](https://www.usb.org/defined-class-codes).*  
-Subclass is defining the function more closely. In most cases, the list of existing subclasses is unavailable, but often it defines standard which device uses, or other implementation details. However, class and subclass in both device or interface can be obtained by `lsusb -v | grep -E 'Bus|bDeviceClass|bDeviceSubClass|bInterfaceClass|bInterfaceSubClass'
+Subclass defines the function more closely. In most cases, the list of existing subclasses is unavailable, but often it defines standard which device uses, or other implementation details. However, class and subclass in both device or interface can be obtained by `lsusb -v | grep -E 'Bus|bDeviceClass|bDeviceSubClass|bInterfaceClass|bInterfaceSubClass'
 `.  
 
 #### Show all rules
@@ -136,14 +136,14 @@ USB mouse or keyboard can be used on port 1.
 ./bin/rules -a -i 03 -g 6
 ./bin/rules -a -i E0 -g 6
 ```
-Group of rules with ID 6 is created. Device has to have function described in interface (because -d 00) and can have one or two interfaces - HID, Wireless controller or both. Every another interface will cause that device won't be authorized.  
+Group of rules with ID 6 is created. Device has to have function described in interface (because -d 00) and can have one or two interfaces - HID, Wireless controller or both. Every other interface will cause, that device won't be authorized.  
 
 ### Run tool itself
 Run tool in project root directory with  
 ```
 make run
 ```
-You will be promped to type your password. Every new USB device from now will be checked against your database of rules. In case that new device will get authorized, message "Device.. auhtorized.." will appear, "Disconnecting potenctialy dangerous device.." otherwise. In both cases, additional info like vendor and product ID, class, subclass and port is displayed.  
+You will be promped to type your password. Every new USB device will be checked against your database of rules from now on. In case that new device will get authorized, message "Device.. auhtorized.." will appear, "Disconnecting potenctially dangerous device.." otherwise. In both cases, additional info like vendor and product ID, class, subclass and port is displayed.  
 
 ### Exiting application
 You can exit this tool by pressing combination ` CTRL + C` .  
