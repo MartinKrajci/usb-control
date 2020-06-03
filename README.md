@@ -7,7 +7,7 @@ You need to install sqlite3 library to make database working.
 or (depends on your linux distro)  
    ```sudo apt-get install libsqlite3-dev```  
   
-Also GCC of version 8 or higher is required.  
+GCC version 8 or higher is required as well.  
 
 ## Instalation
 Run `make` command in project root directory.  
