@@ -776,6 +776,7 @@ int Database::find_group_ID(void *data, int argc, char **argv, char **column)
     else
     {
         database->nextFreeGroupID = string(*argv);
+        database->nextFreeGroupID = to_string((stoi(database->nextFreeGroupID)) + 1);
     }
 
     return 0;
@@ -787,10 +788,10 @@ int Database::find_group_ID(void *data, int argc, char **argv, char **column)
 void Database::init()
 {
     int rc;
-    string SQLfind_group_ID = "SELECT MAX(GROUP_ID) FROM RULE;";
+    string SQLfindGroupID = "SELECT MAX(GROUP_ID) FROM RULE;";
     char *errmsg = NULL;
 
-    rc = sqlite3_exec(db, SQLfind_group_ID.c_str(), find_group_ID, NULL, &errmsg);
+    rc = sqlite3_exec(db, SQLfindGroupID.c_str(), find_group_ID, NULL, &errmsg);
     if (rc)
     {
         throw DatabaseExc("Could not execute command", string(errmsg));
